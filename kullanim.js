@@ -20,8 +20,6 @@ function kgBaslat(){
   document.getElementById('kg-malzeme').innerHTML = '';
   document.getElementById('kg-adres').innerHTML = '';
   document.getElementById('kg-rapor').innerHTML = '';
-  // Yeni eklenen: her zaman giris sekmesini aktif yap
-  kgTabGoster('giris');
 }
 
 function kgBolgeSec(b){
@@ -41,15 +39,15 @@ function kgBolumLabel(b){ return b === 'ust' ? 'E5 Üstü' : 'E5 Altı'; }
 function kgDinleyicileriKur(){
   detachListeners();
   kgMalzemeler = [];
-    kgAdresler = [];
-    kgKullanimlar = [];
-    kgHareketler = [];
+  kgAdresler = [];
+  kgKullanimlar = [];
+  kgHareketler = [];
 
-    const bolumAd = kgBolumLabel(kgBolum);
-    const un1 = db.collection('malzemeler_' + kgBolum).onSnapshot(s => {
-        kgMalzemeler = s.docs.map(d => ({ id: d.id, ...d.data() }));
-        kgHesaplaVeCiz();
-    });
+  const bolumAd = kgBolumLabel(kgBolum);
+  const un1 = db.collection('malzemeler_' + kgBolum).onSnapshot(s => {
+    kgMalzemeler = s.docs.map(d => ({ id: d.id, ...d.data() }));
+    kgHesaplaVeCiz();
+  });
   const un2 = db.collection('kullanim_' + kgBolum).onSnapshot(s => {
     kgKullanimlar = s.docs.map(d => ({ id: d.id, ...d.data() }));
     kgHesaplaVeCiz();
@@ -63,9 +61,15 @@ function kgDinleyicileriKur(){
     kgRenderRapor();
   });
   window.aktifListeners.push(un1, un2, un3, un4);
-  kgTabGoster('giris');
+  
+  // Mevcut aktif sekmeyi bul ve yeniden render et
+  const aktifTab = document.querySelector('#kullanim-modulu .tab-btn.aktif');
+  if (aktifTab) {
+    kgTabGoster(aktifTab.dataset.kgtab);
+  } else {
+    kgTabGoster('giris'); // hiçbiri aktif değilse giris'i aç
+  }
 }
-
 function kgTabGoster(tab){
   document.querySelectorAll('#kullanim-modulu .tab-btn').forEach(b => b.classList.toggle('aktif', b.dataset.kgtab === tab));
   ['giris', 'malzeme', 'adres', 'rapor'].forEach(t => document.getElementById('kg-' + t).classList.toggle('gizli', t !== tab));
@@ -405,13 +409,7 @@ function kgRenderAdresler() {
     if (document.getElementById('kg-adr-ara')) {
         document.getElementById('kg-adr-ara').value = '';
     }
-    // Eğer kgBolum seçili değilse hiç render etme
-    if (!kgBolum) {
-        document.getElementById('kg-adres').innerHTML = '<div class="muted">Lütfen önce bir bölge seçin.</div>';
-        return;
-    }
-
-    // kgAdresler boş veya tanımsız ise mesaj göster
+        // kgAdresler boş veya tanımsız ise mesaj göster
     if (!kgAdresler || kgAdresler.length === 0) {
         document.getElementById('kg-adres').innerHTML = `
             <div class="card"><div class="flex justify-between items-center"><h3>Adresler (0)</h3><div class="flex gap-2"><button class="btn btn-gray" onclick="kgAdresExcelYukleModal()"><i class="fa-solid fa-file-excel"></i> Excel Yükle</button><button class="btn btn-blue" onclick="kgAdresEkleModal()">+ Adres Ekle</button></div></div></div>
