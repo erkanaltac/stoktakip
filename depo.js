@@ -1,12 +1,5 @@
-// depo.js
-// Depo Modülü
-
-var depoMalzemeler = [];
-var depoKayitlar = [];
-var depoAdresler = [];
-var depoHareketler = [];
-var depoHareketBas = '';
-var depoHareketSon = '';
+// depo.js – Depo Modülü
+let depoMalzemeler = [], depoKayitlar = [], depoAdresler = [], depoHareketler = [], depoHareketBas = '', depoHareketSon = '';
 
 function depoBaslat() {
     document.getElementById('depo-cikis').innerHTML = '<div class="muted">Yükleniyor...</div>';
@@ -60,29 +53,28 @@ function depoHesaplaVeCiz() {
     depoRenderMalzemeler();
 }
 
-function depoRenderCikis() {
-    const sorted = depoKayitlar.slice().sort((a, b) => (b.tarihISO + b.saat).localeCompare(a.tarihISO + a.saat));
-    let rows = sorted.map(k => `<tr>
-        <td class="mono">${esc(k.tarih)} ${esc(k.saat)}</td>
-        <td>${esc(k.malzeme)}</td>
-        <td class="text-right">${k.miktar}</td>
-        <td><span class="clickable-text" onclick="depoAdresGecmis('${esc(k.adres).replace(/'/g, "\\'")}')">${esc(k.adres)}</span></td>
-        <td class="hide-mobile">${esc(k.aciklama || '')}</td>
-        <td class="text-right"><button class="icon-btn" onclick="depoKayitSil('${k.id}')"><i class="fa-solid fa-xmark"></i></button></td>
-    </tr>`).join('');
-    if (!rows) rows = '<tr><td colspan="6" class="muted">Henüz depo çıkışı yok.</td></tr>';
-
-    document.getElementById('depo-cikis').innerHTML = `
-        <div class="card"><h3>Depo Çıkışı</h3>
-        <div class="grid3">
-            <div class="suggest-wrap"><label class="f">Adres *</label><input id="depo-adres" autocomplete="off" oninput="depoAdresOneriGoster()" onfocus="depoAdresOneriGoster()"><div class="suggest-list" id="depo-adres-list"></div></div>
-            <div class="suggest-wrap"><label class="f">Malzeme *</label><input id="depo-malzeme" autocomplete="off" oninput="depoMalzemeOneriGoster()" onfocus="depoMalzemeOneriGoster()"><div class="suggest-list" id="depo-malzeme-list"></div></div>
-            <div><label class="f">Miktar *</label><input id="depo-miktar" type="number" min="1" step="1"></div>
-            <div style="grid-column:1/-1"><label class="f">Açıklama</label><input id="depo-aciklama"></div>
-            <div><button class="btn btn-blue w-full" id="depo-btn" onclick="depoCikisEkle()">Depodan Düş</button></div>
-        </div></div>
-        <div class="card" style="overflow:auto"><table><thead><tr><th>Tarih/Saat</th><th>Malzeme</th><th class="text-right">Miktar</th><th>Adres</th><th class="hide-mobile">Açıklama</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-    `;
+function depoRenderCikis(){
+  const sorted = depoKayitlar.slice().sort((a,b)=>(b.tarihISO+b.saat).localeCompare(a.tarihISO+a.saat));
+  var rows = sorted.map(k=>`<tr>
+    <td class="mono">${esc(k.tarih)} ${esc(k.saat)}</td>
+    <td>${esc(k.malzeme)}</td>
+    <td class="text-right">${k.miktar}</td>
+    <td><span class="clickable-text" onclick="depoAdresGecmis('${esc(k.adres).replace(/'/g,"\\'")}')">${esc(k.adres)}</span></td>
+    <td class="hide-mobile">${esc(k.aciklama||'')}</td>
+    <td class="text-right"><button class="icon-btn" onclick="depoKayitSil('${k.id}')"><i class="fa-solid fa-xmark"></i></button></td>
+  </tr>`).join('');
+  if(!rows) rows='<tr><td colspan="6" class="muted">Henüz depo çıkışı yok.</td></tr>';
+  document.getElementById('depo-cikis').innerHTML = `
+    <div class="card"><h3>Depo Çıkışı</h3>
+    <div class="grid3">
+      <div class="suggest-wrap"><label class="f">Adres *</label><input id="depo-adres" autocomplete="off" oninput="depoAdresOneriGoster()" onfocus="depoAdresOneriGoster()"><div class="suggest-list" id="depo-adres-list"></div></div>
+      <div class="suggest-wrap"><label class="f">Malzeme *</label><input id="depo-malzeme" autocomplete="off" oninput="depoMalzemeOneriGoster()" onfocus="depoMalzemeOneriGoster()"><div class="suggest-list" id="depo-malzeme-list"></div></div>
+      <div><label class="f">Miktar *</label><input id="depo-miktar" type="number" min="1" step="1"></div>
+      <div style="grid-column:1/-1"><label class="f">Açıklama</label><input id="depo-aciklama"></div>
+      <div><button class="btn btn-blue w-full" id="depo-btn" onclick="depoCikisEkle()">Depodan Düş</button></div>
+    </div></div>
+    <div class="card" style="overflow:auto"><table><thead><tr><th>Tarih/Saat</th><th>Malzeme</th><th class="text-right">Miktar</th><th>Adres</th><th class="hide-mobile">Açıklama</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+  `;
 }
 
 function depoAdresOneriGoster() {
@@ -102,28 +94,18 @@ function depoMalzemeOneriGoster() {
     }, document.getElementById('depo-malzeme'));
 }
 
-async function depoCikisEkle() {
-    const adres = formatText(document.getElementById('depo-adres').value);  // 🔤
-    const malzeme = formatText(document.getElementById('depo-malzeme').value);  // 🔤
-    const miktar = Number(document.getElementById('depo-miktar').value);
-    const aciklama = formatText(document.getElementById('depo-aciklama').value);  // 🔤
-    if (!adres || !malzeme || !miktar) return toast('Tüm zorunlu alanları doldurun');
-    if (!depoMalzemeler.some(m => trLower(m.ad) === trLower(malzeme))) return toast('Geçersiz malzeme');
-    const n = nowTarih();
-    await db.collection('depo_kayitlari').add({
-        tarih: n.display, tarihISO: n.iso, saat: n.saat,
-        malzeme, miktar, adres, aciklama, kullanici: kullaniciAdi()
-    });
-    await db.collection('stok_hareketleri').add({
-        tarih: n.display, tarihISO: n.iso, saat: n.saat,
-        bolum: 'Depo', islem: 'DEPO ÇIKIŞI', malzeme,
-        miktarDegisim: -miktar, aciklama: 'Adres: ' + adres, kullanici: kullaniciAdi()
-    });
-    document.getElementById('depo-malzeme').value = '';
-    document.getElementById('depo-miktar').value = '';
-    document.getElementById('depo-adres').value = '';
-    document.getElementById('depo-aciklama').value = '';
-    toast('Depodan düşüldü');
+async function depoCikisEkle(){
+  const adres = formatText(document.getElementById('depo-adres').value);
+  const malzeme = formatText(document.getElementById('depo-malzeme').value);
+  const miktar = Number(document.getElementById('depo-miktar').value);
+  const aciklama = formatText(document.getElementById('depo-aciklama').value);
+  if(!adres||!malzeme||!miktar) return toast('Zorunlu alanları doldurun');
+  if(!depoMalzemeler.some(m=>trLower(m.ad)===trLower(malzeme))) return toast('Geçersiz malzeme');
+  const n=nowTarih();
+  await db.collection('depo_kayitlari').add({ tarih:n.display, tarihISO:n.iso, saat:n.saat, malzeme, miktar, adres, aciklama, kullanici:kullaniciAdi() });
+  await db.collection('stok_hareketleri').add({ tarih:n.display, tarihISO:n.iso, saat:n.saat, bolum:'Depo', islem:'DEPO ÇIKIŞI', malzeme, miktarDegisim:-miktar, aciklama:'Adres: '+adres, kullanici:kullaniciAdi() });
+  document.getElementById('depo-malzeme').value=''; document.getElementById('depo-miktar').value=''; document.getElementById('depo-adres').value=''; document.getElementById('depo-aciklama').value='';
+  toast('Depodan düşüldü');
 }
 
 function depoKayitSil(id) {
