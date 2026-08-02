@@ -1,0 +1,31 @@
+name: Deploy static site with Firebase config
+
+on:
+  push:
+    branches: [ "main" ]   # veya master, hangi dalı kullanıyorsan
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Create config.js from secrets
+        run: |
+          sed -e "s|{{FIREBASE_API_KEY}}|${{ secrets.FIREBASE_API_KEY }}|g" \
+              -e "s|{{FIREBASE_AUTH_DOMAIN}}|${{ secrets.FIREBASE_AUTH_DOMAIN }}|g" \
+              -e "s|{{FIREBASE_PROJECT_ID}}|${{ secrets.FIREBASE_PROJECT_ID }}|g" \
+              -e "s|{{FIREBASE_STORAGE_BUCKET}}|${{ secrets.FIREBASE_STORAGE_BUCKET }}|g" \
+              -e "s|{{FIREBASE_MESSAGING_SENDER_ID}}|${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}|g" \
+              -e "s|{{FIREBASE_APP_ID}}|${{ secrets.FIREBASE_APP_ID }}|g" \
+              config.template.js > config.js
+          # Oluşan config.js'i kontrol (isteğe bağlı)
+          cat config.js
+
+      # Eğer GitHub Pages kullanıyorsan:
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./    # veya sitenin kök dizini (HTML'in olduğu yer)
