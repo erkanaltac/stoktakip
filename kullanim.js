@@ -405,9 +405,18 @@ function kgExcelYukle(){
 
 // ========== ADRES LİSTESİ (MAHALLE GRUPLU) ==========
 function kgRenderAdresler() {
-    // Arama kutusunu sıfırla (güvenlik için)
+    // Arama kutusunu sıfırla
     if (document.getElementById('kg-adr-ara')) {
         document.getElementById('kg-adr-ara').value = '';
+    }
+
+    // Bölge seçili değilse açıklama mesajı göster, ama kartı da göster ki kullanıcı butonları görsün
+    if (!kgBolum) {
+        document.getElementById('kg-adres').innerHTML = `
+            <div class="card"><div class="flex justify-between items-center"><h3>Adresler</h3></div></div>
+            <div class="muted">Lütfen yukarıdan bir bölge seçin.</div>
+        `;
+        return;
     }
         // kgAdresler boş veya tanımsız ise mesaj göster
     if (!kgAdresler || kgAdresler.length === 0) {
@@ -499,12 +508,15 @@ async function kgAdresKaydet() {
             onay: null
         });
         closeModal();
+        // Hemen render et
+        kgRenderAdresler();
+        // 300ms sonra bir daha render et (dinleyici gecikmesine karşı)
+        setTimeout(() => kgRenderAdresler(), 300);
         toast('Adres eklendi');
     } catch (e) {
         appAlert('Kayıt başarısız: ' + e.message);
     }
 }
-
 // ========== ADRES DÜZENLEME ==========
 function kgAdresDuzenle(id) {
     const a = kgAdresler.find(x => x.id === id);
@@ -534,6 +546,8 @@ async function kgAdresGuncelle(id) {
     const onay = onayVal === 'true' ? true : onayVal === 'false' ? false : null;
     await db.collection('adresler_' + kgBolum).doc(id).update({ mahalle, adres: adresDetay, onay });
     closeModal();
+    kgRenderAdresler();
+    setTimeout(() => kgRenderAdresler(), 300);
     toast('Güncellendi');
 }
 
