@@ -103,6 +103,15 @@
   </style>
 </head>
 <body>
+
+  <!-- Yükleniyor Göstergesi -->
+<div id="loader" class="flex items-center justify-center min-h-screen" style="background-color:#0f172a;">
+  <div class="text-center">
+    <i class="fa-solid fa-spinner fa-spin text-4xl text-teal-400 mb-3"></i>
+    <p class="text-gray-400 text-sm">Yükleniyor...</p>
+  </div>
+</div>
+  
   <!-- LOGIN EKRANI -->
   <div id="login-ekrani" class="flex items-center justify-center min-h-screen">
     <form onsubmit="girisYap(); return false;" class="card w-96 text-center shadow-lg" style="max-width:90vw;">
