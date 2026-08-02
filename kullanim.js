@@ -113,13 +113,19 @@ function kgMalzemeOneriGoster(){
   }, document.getElementById('kg-u-malzeme'));
 }
 
-function kgAdresOneriGoster(){
-  const val = trLower(document.getElementById('kg-u-adres').value.trim());
-  const all = kgAdresler.map(a => a.ad);
-  const matches = val ? all.filter(a => trLower(a).indexOf(val) > -1) : all.slice(0, 6);
-  renderSuggest(document.getElementById('kg-u-adres-list'), matches.slice(0, 8), v => {
-    document.getElementById('kg-u-adres').value = v;
-  }, document.getElementById('kg-u-adres'));
+// ========== ADRES ÖNERİSİ (KULLANIM GİRİŞİ İÇİN BİRLEŞİK GÖRÜNÜM) ==========
+function kgAdresOneriGoster() {
+    const val = trLower(document.getElementById('kg-u-adres').value.trim());
+    // Birleşik adres listesi oluştur
+    const tumAdresler = kgAdresler.map(a => (a.mahalle || '') + ' ' + (a.adres || '')).filter(Boolean);
+    const matches = val ? tumAdresler.filter(a => trLower(a).indexOf(val) > -1) : tumAdresler.slice(0, 8);
+    renderSuggest(document.getElementById('kg-u-adres-list'), matches.slice(0, 8), v => {
+        document.getElementById('kg-u-adres').value = v;
+    }, document.getElementById('kg-u-adres'));
+}
+
+function kgAdresVarMi(tamAdres) {
+    return kgAdresler.some(a => trLower((a.mahalle || '') + ' ' + (a.adres || '')) === trLower(tamAdres));
 }
 
 async function kgKullanimEkle(){
@@ -358,73 +364,110 @@ function kgExcelYukle(){
   reader.readAsArrayBuffer(f);
 }
 
-// Adres sekmesi
-function kgRenderAdresler(){
-  const q = trLower(kgAdrQuery);
-  const list = kgAdresler.filter(a => !q || trLower(a.ad).indexOf(q) > -1).sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
-  let rows = list.map(a => `<tr>
-    <td><span class="clickable-text" onclick="kgAdresGecmis('${esc(a.ad).replace(/'/g, "\\'")}')">${esc(a.ad)}</span></td>
-    <td>${a.onay === true ? '<span class="text-green-400">Onaylı</span>' : a.onay === false ? '<span class="text-red-400">Reddedildi</span>' : '<span class="text-gray-500">Beklemede</span>'}</td>
-    <td class="text-right"><button class="icon-btn" onclick="kgAdresDuzenle('${a.id}')"><i class="fa-solid fa-pen"></i></button> <button class="icon-btn" onclick="kgAdresSil('${a.id}')"><i class="fa-solid fa-trash text-red-400"></i></button></td>
-  </tr>`).join('');
-  if (!rows) rows = '<tr><td colspan="3" class="muted">Henüz adres yok.</td></tr>';
-  document.getElementById('kg-adres').innerHTML = `
-    <div class="card"><div class="flex justify-between items-center"><h3>Adresler (${kgAdresler.length})</h3><div class="flex gap-2"><button class="btn btn-gray" onclick="kgAdresExcelYukleModal()"><i class="fa-solid fa-file-excel"></i> Excel Yükle</button><button class="btn btn-blue" onclick="kgAdresEkleModal()">+ Adres Ekle</button></div></div>
-    <input id="kg-adr-ara" value="${esc(kgAdrQuery)}" class="mt-3" placeholder="Ara..." oninput="kgAdrQuery=this.value;kgRenderAdresler();"></div>
-    <div class="card" style="overflow:auto"><table><thead><tr><th>Mahalle / Adres</th><th>Onay</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-  `;
-}
+// ========== ADRES LİSTESİ (MAHALLE GRUPLU) ==========
+function kgRenderAdresler() {
+    const q = trLower(kgAdrQuery);
+    const filtrelenmis = kgAdresler.filter(a => {
+        if (!q) return true;
+        const tamAdres = (a.mahalle || '') + ' ' + (a.adres || '');
+        return trLower(tamAdres).indexOf(q) > -1;
+    }).sort((a, b) => {
+        if (a.mahalle !== b.mahalle) return a.mahalle.localeCompare(b.mahalle, 'tr');
+        return a.adres.localeCompare(b.adres, 'tr');
+    });
 
-function kgAdresEkleModal(){
-  openModal('Adres Ekle', `<textarea id="ka-list" style="min-height:120px" placeholder="Her satıra bir adres"></textarea><button class="btn btn-blue w-full mt-2" onclick="kgAdresKaydet()">Kaydet</button>`);
-}
+    // Mahalle grupları
+    const gruplar = {};
+    filtrelenmis.forEach(a => {
+        const m = a.mahalle || 'Diğer';
+        if (!gruplar[m]) gruplar[m] = [];
+        gruplar[m].push(a);
+    });
 
-async function kgAdresKaydet(){
-  const lines = document.getElementById('ka-list').value.split(/[\r\n]+/).map(s => s.trim()).filter(Boolean);
-  if (!lines.length) return toast('En az bir adres yazın');
-  const mevcut = kgAdresler.map(a => trLower(a.ad));
-  const batch = db.batch(); let eklenen = 0;
-  lines.forEach(l => {
-    if (mevcut.indexOf(trLower(l)) === -1) {
-      batch.set(db.collection('adresler_' + kgBolum).doc(), { ad: l, onay: null });
-      eklenen++; mevcut.push(trLower(l));
+    let html = '';
+    for (const [mahalle, adresler] of Object.entries(gruplar)) {
+        html += `<div class="card mb-2"><h3 class="text-sm text-teal-300">${esc(mahalle)} (${adresler.length})</h3>
+        <table><thead><tr><th>Adres Detayı</th><th>Onay</th><th></th></tr></thead><tbody>`;
+        adresler.forEach(a => {
+            html += `<tr>
+                <td><span class="clickable-text" onclick="kgAdresGecmis('${esc((a.mahalle + ' ' + a.adres).replace(/'/g, "\\'"))}')">${esc(a.adres)}</span></td>
+                <td>${a.onay === true ? '<span class="text-green-400">Onaylı</span>' : a.onay === false ? '<span class="text-red-400">Reddedildi</span>' : '<span class="text-gray-500">Beklemede</span>'}</td>
+                <td class="text-right">
+                    <button class="icon-btn" onclick="kgAdresDuzenle('${a.id}')"><i class="fa-solid fa-pen"></i></button>
+                    <button class="icon-btn" onclick="kgAdresSil('${a.id}')"><i class="fa-solid fa-trash text-red-400"></i></button>
+                </td>
+            </tr>`;
+        });
+        html += `</tbody></table></div>`;
     }
-  });
-  if (eklenen === 0) return appAlert('Girdiğiniz adres(ler) zaten listede mevcut.');
-  await batch.commit();
-  closeModal(); toast(eklenen + ' adres eklendi');
+
+    if (!html) html = '<div class="muted">Henüz adres yok.</div>';
+
+    document.getElementById('kg-adres').innerHTML = `
+        <div class="card"><div class="flex justify-between items-center"><h3>Adresler (${kgAdresler.length})</h3><div class="flex gap-2"><button class="btn btn-gray" onclick="kgAdresExcelYukleModal()"><i class="fa-solid fa-file-excel"></i> Excel Yükle</button><button class="btn btn-blue" onclick="kgAdresEkleModal()">+ Adres Ekle</button></div></div>
+        <input id="kg-adr-ara" value="${esc(kgAdrQuery)}" class="mt-3" placeholder="Mahalle veya adres ara..." oninput="kgAdrQuery=this.value;kgRenderAdresler();"></div>
+        ${html}
+    `;
 }
 
-function kgAdresDuzenle(id){
-  const a = kgAdresler.find(x => x.id === id);
-  if (!a) return;
-  openModal('Adres Düzenle', `
-    <label class="f">Adres Adı</label><input id="ea-ad" value="${esc(a.ad)}" class="mb-3">
-    <label class="f">Onay Durumu</label><div class="flex gap-2 mb-3" id="ea-onay-btns">
-      <button type="button" class="btn ${a.onay === true ? 'btn-green' : 'btn-gray'}" onclick="kgAdresOnaySec(true)"><i class="fa-solid fa-check"></i> Onayla</button>
-      <button type="button" class="btn ${a.onay === false ? 'btn-red' : 'btn-gray'}" onclick="kgAdresOnaySec(false)"><i class="fa-solid fa-xmark"></i> Reddet</button>
-      <button type="button" class="btn btn-gray" onclick="kgAdresOnaySec(null)">Temizle</button>
-    </div>
-    <input type="hidden" id="ea-onay" value="${a.onay === true ? 'true' : a.onay === false ? 'false' : 'null'}">
-    <button class="btn btn-blue w-full" onclick="kgAdresGuncelle('${id}')">Kaydet</button>
-  `);
+// ========== ADRES EKLEME ==========
+function kgAdresEkleModal() {
+    openModal('Adres Ekle', `
+        <div class="grid3">
+            <div><label class="f">Mahalle *</label><input id="ka-mahalle" placeholder="Mahalle adı"></div>
+            <div><label class="f">Adres Detayı *</label><input id="ka-adres" placeholder="Sokak, cadde, no..."></div>
+        </div>
+        <button class="btn btn-blue w-full mt-3" onclick="kgAdresKaydet()">Kaydet</button>
+    `);
 }
 
-function kgAdresOnaySec(v){
-  document.getElementById('ea-onay').value = String(v);
-  const buttons = document.querySelectorAll('#ea-onay-btns button');
-  buttons.forEach(b => { b.classList.remove('btn-green', 'btn-red'); b.classList.add('btn-gray'); });
-  if (v === true) buttons[0].className = 'btn btn-green';
-  if (v === false) buttons[1].className = 'btn btn-red';
+async function kgAdresKaydet() {
+    const mahalle = document.getElementById('ka-mahalle').value.trim();
+    const adresDetay = document.getElementById('ka-adres').value.trim();
+    if (!mahalle || !adresDetay) return toast('Mahalle ve adres detayı zorunludur.');
+
+    // Aynı mahalle+adres kombinasyonu var mı?
+    const mevcut = kgAdresler.some(a => trLower(a.mahalle) === trLower(mahalle) && trLower(a.adres) === trLower(adresDetay));
+    if (mevcut) return toast('Bu adres zaten kayıtlı.');
+
+    await db.collection('adresler_' + kgBolum).add({
+        mahalle: mahalle,
+        adres: adresDetay,
+        onay: null
+    });
+    closeModal();
+    toast('Adres eklendi');
 }
 
-async function kgAdresGuncelle(id){
-  const ad = document.getElementById('ea-ad').value.trim();
-  const onayVal = document.getElementById('ea-onay').value;
-  const onay = onayVal === 'true' ? true : onayVal === 'false' ? false : null;
-  if (!ad) return toast('Adres boş olamaz');
-  await db.collection('adresler_' + kgBolum).doc(id).set({ ad, onay }, { merge: true });
-  closeModal(); toast('Güncellendi');
+// ========== ADRES DÜZENLEME ==========
+function kgAdresDuzenle(id) {
+    const a = kgAdresler.find(x => x.id === id);
+    if (!a) return;
+    openModal('Adres Düzenle', `
+        <div class="grid3">
+            <div><label class="f">Mahalle</label><input id="ea-mahalle" value="${esc(a.mahalle || '')}"></div>
+            <div><label class="f">Adres Detayı</label><input id="ea-adres" value="${esc(a.adres || '')}"></div>
+        </div>
+        <label class="f mt-3">Onay Durumu</label>
+        <div class="flex gap-2 mb-3" id="ea-onay-btns">
+            <button type="button" class="btn ${a.onay === true ? 'btn-green' : 'btn-gray'}" onclick="kgAdresOnaySec(true)"><i class="fa-solid fa-check"></i> Onayla</button>
+            <button type="button" class="btn ${a.onay === false ? 'btn-red' : 'btn-gray'}" onclick="kgAdresOnaySec(false)"><i class="fa-solid fa-xmark"></i> Reddet</button>
+            <button type="button" class="btn btn-gray" onclick="kgAdresOnaySec(null)">Temizle</button>
+        </div>
+        <input type="hidden" id="ea-onay" value="${a.onay === true ? 'true' : a.onay === false ? 'false' : 'null'}">
+        <button class="btn btn-blue w-full" onclick="kgAdresGuncelle('${id}')">Güncelle</button>
+    `);
+}
+
+async function kgAdresGuncelle(id) {
+    const mahalle = document.getElementById('ea-mahalle').value.trim();
+    const adresDetay = document.getElementById('ea-adres').value.trim();
+    if (!mahalle || !adresDetay) return toast('Mahalle ve adres detayı boş olamaz.');
+    const onayVal = document.getElementById('ea-onay').value;
+    const onay = onayVal === 'true' ? true : onayVal === 'false' ? false : null;
+    await db.collection('adresler_' + kgBolum).doc(id).update({ mahalle, adres: adresDetay, onay });
+    closeModal();
+    toast('Güncellendi');
 }
 
 function kgAdresSil(id){
@@ -438,27 +481,42 @@ function kgAdresExcelYukleModal(){
   openModal('Excel\'den Toplu Adres Yükle', `<p class="text-xs text-gray-400 mb-2">Sadece "Adres" sütunu olmalı.</p><input type="file" id="ka-excel" accept=".xlsx,.xls"><button class="btn btn-blue w-full mt-3" onclick="kgAdresExcelYukle()">Yükle</button>`);
 }
 
-function kgAdresExcelYukle(){
-  const f = document.getElementById('ka-excel').files[0];
-  if (!f) return toast('Dosya seçin');
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
-    if (json.length < 2) return toast('Veri yok');
-    const mevcut = kgAdresler.map(a => trLower(a.ad));
-    const batch = db.batch(); let eklenen = 0;
-    for (let i = 1; i < json.length; i++) {
-      const ad = String(json[i][0] || '').trim();
-      if (!ad || mevcut.indexOf(trLower(ad)) > -1) continue;
-      batch.set(db.collection('adresler_' + kgBolum).doc(), { ad, onay: null });
-      mevcut.push(trLower(ad)); eklenen++;
-    }
-    if (eklenen === 0) return toast('Eklenecek yeni adres yok');
-    await batch.commit();
-    closeModal(); toast(eklenen + ' adres eklendi');
-  };
-  reader.readAsArrayBuffer(f);
+// ========== EXCEL YÜKLEME (İKİ SÜTUN) ==========
+function kgAdresExcelYukleModal() {
+    openModal('Excel\'den Toplu Adres Yükle', `
+        <p class="text-xs text-gray-400 mb-2">Sütunlar: <b>Mahalle</b>, <b>Adres Detayı</b> (başlık olmalı)</p>
+        <input type="file" id="ka-excel" accept=".xlsx,.xls">
+        <button class="btn btn-blue w-full mt-3" onclick="kgAdresExcelYukle()">Yükle</button>
+    `);
+}
+
+async function kgAdresExcelYukle() {
+    const f = document.getElementById('ka-excel').files[0];
+    if (!f) return toast('Dosya seçin');
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+        if (!json.length) return toast('Veri yok');
+        const batch = db.batch();
+        let eklenen = 0;
+        const mevcutSet = new Set(kgAdresler.map(a => trLower(a.mahalle + '|||' + a.adres)));
+        json.forEach(row => {
+            const mahalle = String(row.Mahalle || row.mahalle || '').trim();
+            const adresDetay = String(row['Adres Detayı'] || row['Adres'] || row.adres || '').trim();
+            if (!mahalle || !adresDetay) return;
+            const key = trLower(mahalle + '|||' + adresDetay);
+            if (mevcutSet.has(key)) return;
+            batch.set(db.collection('adresler_' + kgBolum).doc(), { mahalle, adres: adresDetay, onay: null });
+            mevcutSet.add(key);
+            eklenen++;
+        });
+        if (eklenen === 0) return toast('Yeni adres bulunamadı');
+        await batch.commit();
+        closeModal();
+        toast(eklenen + ' adres eklendi');
+    };
+    reader.readAsArrayBuffer(f);
 }
 
 // Rapor sekmesi
