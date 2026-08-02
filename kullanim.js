@@ -144,10 +144,10 @@ function kgAdresVarMi(tamAdres) {
 
 async function kgKullanimEkle(){
   if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
-  const malzeme = document.getElementById('kg-u-malzeme').value.trim();
+  const malzeme = formatText(document.getElementById('kg-u-malzeme').value);
   const miktar = Number(document.getElementById('kg-u-miktar').value);
-  const adres = document.getElementById('kg-u-adres').value.trim();
-  const aciklama = document.getElementById('kg-u-aciklama').value.trim();
+  const adres = formatText(document.getElementById('kg-u-adres').value);
+  const aciklama = formatText(document.getElementById('kg-u-aciklama').value);
   const tarihIso = document.getElementById('kg-u-tarih').value || isoBugun();
   if (!malzeme || !miktar || !adres) return toast('Zorunlu alanları doldurun');
   if (!kgMalzemeler.some(m => trLower(m.ad) === trLower(malzeme)) || !kgAdresVarMi(adres)) return toast('Geçersiz malzeme/adres');
@@ -185,10 +185,10 @@ function kgKullanimDuzenle(id){
 
 async function kgKullanimGuncelle(id) {
     if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
-    const malzeme = document.getElementById('duz-malzeme').value.trim();
+    const malzeme = formatText(document.getElementById('duz-malzeme').value);
     const miktar = Number(document.getElementById('duz-miktar').value);
-    const adres = document.getElementById('duz-adres').value.trim();
-    const aciklama = document.getElementById('duz-aciklama').value.trim();
+    const adres = formatText(document.getElementById('duz-adres').value);
+    const aciklama = formatText(document.getElementById('duz-aciklama').value);
     const tarihIso = document.getElementById('duz-tarih').value;
 
     // Zorunlu alan kontrolü
@@ -295,7 +295,7 @@ function kgMalzemeEkleModal(){
 
 async function kgMalzemeKaydet(){
   if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
-  const ad = document.getElementById('km-ad').value.trim();
+  const ad = formatText(document.getElementById('km-ad').value);   // veya em-ad
   const bas = Number(document.getElementById('km-bas').value);
   if (!ad || isNaN(bas)) return toast('Ad ve başlangıç stok gerekli');
   if (kgMalzemeler.some(m => trLower(m.ad) === trLower(ad))) return toast('Bu malzeme zaten var');
@@ -331,7 +331,7 @@ async function kgMalzemeGuncelle(id){
   if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
   const m = kgMalzemeler.find(x => x.id === id);
   const eskiBas = m ? Number(m.baslangic || 0) : 0;
-  const ad = document.getElementById('em-ad').value.trim();
+  const ad = formatText(document.getElementById('km-ad').value);   // veya em-ad
   const bas = Number(document.getElementById('em-bas').value);
   if (!ad) return toast('Ad boş olamaz');
   await db.collection('malzemeler_' + kgBolum).doc(id).set({
@@ -475,8 +475,8 @@ function kgAdresEkleModal() {
 
 async function kgAdresKaydet() {
     if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
-    const mahalle = document.getElementById('ka-mahalle').value.trim();
-    const adresDetay = document.getElementById('ka-adres').value.trim();
+    const mahalle = formatText(document.getElementById('ea-mahalle').value);
+    const adresDetay = formatText(document.getElementById('ea-adres').value);
     if (!mahalle || !adresDetay) return toast('Mahalle ve adres detayı zorunludur.');
 
     // Aynı mahalle+adres kombinasyonu var mı?
