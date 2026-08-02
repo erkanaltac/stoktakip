@@ -139,6 +139,8 @@ function renderSuggest(listEl, items, onPick, inputEl) {
     listEl.style.display = 'block';
     suggestActiveIndex = -1;
     var itDivs = listEl.querySelectorAll('.it');
+
+    // Her öneriye tıklama olayı
     itDivs.forEach(function (el) {
         el.onclick = function (e) {
             e.stopPropagation();
@@ -148,19 +150,25 @@ function renderSuggest(listEl, items, onPick, inputEl) {
             if (inputEl) inputEl.focus();
         };
     });
+
+    // Klavye olaylarını input'a bağla
     if (inputEl) {
         inputEl.onkeydown = function (e) {
             if (listEl.style.display === 'none') return;
+
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
+                e.stopPropagation();
                 suggestActiveIndex = Math.min(suggestActiveIndex + 1, itDivs.length - 1);
                 updateActive(itDivs);
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
+                e.stopPropagation();
                 suggestActiveIndex = Math.max(suggestActiveIndex - 1, 0);
                 updateActive(itDivs);
             } else if (e.key === 'Enter') {
                 e.preventDefault();
+                e.stopPropagation();
                 if (suggestActiveIndex >= 0 && suggestActiveIndex < itDivs.length) {
                     itDivs[suggestActiveIndex].click();
                 } else {
