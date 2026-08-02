@@ -24,9 +24,8 @@ jobs:
             appId: "${{ secrets.FIREBASE_APP_ID }}"
           };
           EOF
-          # Güvenlik için şablonu sil (gh-pages'e gitmesin)
-          rm -f config.template.js
-          # Dosyanın oluştuğunu ve içeriğini logla
+          # Şablonu ve .gitignore'ı sil (gh-pages'e gitmesinler)
+          rm -f config.template.js .gitignore
           echo "=== config.js içeriği ==="
           cat config.js
           echo "=== Mevcut dosyalar ==="
