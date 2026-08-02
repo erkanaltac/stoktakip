@@ -47,7 +47,6 @@ function sifreGuncelle() {
         });
 }
 
-// Oturum durumu takibi
 auth.onAuthStateChanged(function (user) {
     if (user) {
         window.aktifKullanici = user;
@@ -68,6 +67,8 @@ auth.onAuthStateChanged(function (user) {
             }
         };
 
+        // Her girişte ana sayfayı göster
+        anaMenuyuGoster();
         modulYetkileriniUygula();
     } else {
         document.getElementById('login-ekrani').classList.remove('gizli');
