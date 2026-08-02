@@ -1,6 +1,3 @@
-// helpers.js
-// Ortak yardımcı fonksiyonlar
-
 // Toast bildirimi
 function toast(msg) {
     const t = document.getElementById('toast');
