@@ -16,10 +16,12 @@ function kgBaslat(){
   document.getElementById('kg-btn-ust').classList.remove('aktif');
   kgBolum = null;
   document.getElementById('secili-bolge-etiketi').innerText = 'Bölge Seçilmedi';
-  document.getElementById('kg-giris').innerHTML = '<div class="muted">Bölge seçin</div>';
+  document.getElementById('kg-giris').innerHTML = '<div class="muted">Lütfen yukarıdan bir bölge seçin.</div>';
   document.getElementById('kg-malzeme').innerHTML = '';
   document.getElementById('kg-adres').innerHTML = '';
   document.getElementById('kg-rapor').innerHTML = '';
+  // Yeni eklenen: her zaman giris sekmesini aktif yap
+  kgTabGoster('giris');
 }
 
 function kgBolgeSec(b){
