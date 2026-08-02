@@ -67,6 +67,15 @@ function kgDinleyicileriKur(){
 function kgTabGoster(tab){
   document.querySelectorAll('#kullanim-modulu .tab-btn').forEach(b => b.classList.toggle('aktif', b.dataset.kgtab === tab));
   ['giris', 'malzeme', 'adres', 'rapor'].forEach(t => document.getElementById('kg-' + t).classList.toggle('gizli', t !== tab));
+  
+  // Arama değişkenlerini sıfırla
+  kgMatQuery = '';
+  kgAdrQuery = '';
+  // (Hareket filtresi zaten kgBolgeSec ile sıfırlanıyor, ama yine de ekleyelim)
+  kgHareketBas = '';
+  kgHareketSon = '';
+
+  // İlgili sekmeyi render et (böylece input değerleri de boş gelir)
   if (tab === 'giris') kgRenderGiris();
   if (tab === 'malzeme') kgRenderMalzemeTablo();
   if (tab === 'adres') kgRenderAdresler();
