@@ -1,12 +1,12 @@
 // depo.js
 // Depo Modülü
 
-let depoMalzemeler = [];
-let depoKayitlar = [];
-let depoAdresler = [];
-let depoHareketler = [];
-let depoHareketBas = '';
-let depoHareketSon = '';
+var depoMalzemeler = [];
+var depoKayitlar = [];
+var depoAdresler = [];
+var depoHareketler = [];
+var depoHareketBas = '';
+var depoHareketSon = '';
 
 function depoBaslat() {
     document.getElementById('depo-cikis').innerHTML = '<div class="muted">Yükleniyor...</div>';
@@ -19,10 +19,10 @@ function depoBaslat() {
         depoHesaplaVeCiz();
     });
     const un3 = db.collection('adresler_alt').onSnapshot(s => {
-        depoAdresler = uniq(depoAdresler.concat(s.docs.map(d => d.data().ad)));
+        depoAdresler = uniq(depoAdresler.concat(s.docs.map(d => (d.data().mahalle || '') + ' ' + (d.data().adres || ''))));
     });
     const un4 = db.collection('adresler_ust').onSnapshot(s => {
-        depoAdresler = uniq(depoAdresler.concat(s.docs.map(d => d.data().ad)));
+        depoAdresler = uniq(depoAdresler.concat(s.docs.map(d => (d.data().mahalle || '') + ' ' + (d.data().adres || ''))));
     });
     const un5 = db.collection('stok_hareketleri').where('bolum', '==', 'Depo').onSnapshot(s => {
         depoHareketler = s.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -103,10 +103,10 @@ function depoMalzemeOneriGoster() {
 }
 
 async function depoCikisEkle() {
-    const adres = document.getElementById('depo-adres').value.trim();
-    const malzeme = document.getElementById('depo-malzeme').value.trim();
+    const adres = formatText(document.getElementById('depo-adres').value);  // 🔤
+    const malzeme = formatText(document.getElementById('depo-malzeme').value);  // 🔤
     const miktar = Number(document.getElementById('depo-miktar').value);
-    const aciklama = document.getElementById('depo-aciklama').value.trim();
+    const aciklama = formatText(document.getElementById('depo-aciklama').value);  // 🔤
     if (!adres || !malzeme || !miktar) return toast('Tüm zorunlu alanları doldurun');
     if (!depoMalzemeler.some(m => trLower(m.ad) === trLower(malzeme))) return toast('Geçersiz malzeme');
     const n = nowTarih();
@@ -184,14 +184,14 @@ function depoMalzemeEkleModal() {
 }
 
 async function depoMalzemeKaydet() {
-    const ad = document.getElementById('dm-ad').value.trim();
+    const ad = formatText(document.getElementById('dm-ad').value);  // 🔤
     const bas = Number(document.getElementById('dm-bas').value);
     if (!ad || isNaN(bas)) return toast('Ad ve başlangıç stok gerekli');
     if (depoMalzemeler.some(m => trLower(m.ad) === trLower(ad))) return toast('Bu malzeme zaten var');
     await db.collection('depo_malzemeler').add({
         kod: document.getElementById('dm-kod').value.trim(),
         ad: ad,
-        aciklama: document.getElementById('dm-aciklama').value.trim(),
+        aciklama: formatText(document.getElementById('dm-aciklama').value),  // 🔤
         birim: document.getElementById('dm-birim').value.trim(),
         baslangic: bas
     });
@@ -221,13 +221,13 @@ function depoMalzemeDuzenle(id) {
 async function depoMalzemeGuncelle(id) {
     const m = depoMalzemeler.find(x => x.id === id);
     const eskiBas = m ? Number(m.baslangic || 0) : 0;
-    const ad = document.getElementById('edm-ad').value.trim();
+    const ad = formatText(document.getElementById('edm-ad').value);  // 🔤
     const bas = Number(document.getElementById('edm-bas').value);
     if (!ad) return toast('Ad boş olamaz');
     await db.collection('depo_malzemeler').doc(id).set({
         kod: document.getElementById('edm-kod').value.trim(),
         ad: ad,
-        aciklama: document.getElementById('edm-aciklama').value.trim(),
+        aciklama: formatText(document.getElementById('edm-aciklama').value),  // 🔤
         birim: document.getElementById('edm-birim').value.trim(),
         baslangic: bas
     }, { merge: true });
@@ -266,13 +266,13 @@ function depoExcelYukle() {
         const batch = db.batch();
         let eklenen = 0;
         json.forEach(row => {
-            const ad = String(row.Ad || row.ad || '').trim();
+            const ad = formatText(String(row.Ad || row.ad || ''));  // 🔤
             if (!ad || mevcut.indexOf(trLower(ad)) > -1) return;
             batch.set(db.collection('depo_malzemeler').doc(), {
                 ad: ad,
                 kod: String(row.Kod || row.kod || ''),
                 birim: String(row.Birim || row.birim || 'Adet'),
-                aciklama: String(row.Aciklama || row.aciklama || ''),
+                aciklama: formatText(String(row.Aciklama || row.aciklama || '')),  // 🔤
                 baslangic: Number(row.Baslangic || row.baslangic || 0)
             });
             mevcut.push(trLower(ad));
@@ -320,7 +320,7 @@ function depoPdf() {
     const l = depoHareketler.slice().sort((a, b) => (b.tarihISO + b.saat).localeCompare(a.tarihISO + a.saat));
     doc.autoTable({
         startY: 20,
-        head: [['Tarih', 'Saat', 'Islem', 'Malzeme', 'Degisim', 'Aciklama']],
+        head: [['Tarih', 'Saat', 'İşlem', 'Malzeme', 'Değişim', 'Açıklama']],
         body: l.map(h => [h.tarih, h.saat, h.islem, h.malzeme, h.miktarDegisim, h.aciklama || ''])
     });
     doc.save('depo_hareketleri.pdf');
