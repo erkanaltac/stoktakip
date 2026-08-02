@@ -38,11 +38,16 @@ function kgBolumLabel(b){ return b === 'ust' ? 'E5 Üstü' : 'E5 Altı'; }
 
 function kgDinleyicileriKur(){
   detachListeners();
-  const bolumAd = kgBolumLabel(kgBolum);
-  const un1 = db.collection('malzemeler_' + kgBolum).onSnapshot(s => {
-    kgMalzemeler = s.docs.map(d => ({ id: d.id, ...d.data() }));
-    kgHesaplaVeCiz();
-  });
+  kgMalzemeler = [];
+    kgAdresler = [];
+    kgKullanimlar = [];
+    kgHareketler = [];
+
+    const bolumAd = kgBolumLabel(kgBolum);
+    const un1 = db.collection('malzemeler_' + kgBolum).onSnapshot(s => {
+        kgMalzemeler = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        kgHesaplaVeCiz();
+    });
   const un2 = db.collection('kullanim_' + kgBolum).onSnapshot(s => {
     kgKullanimlar = s.docs.map(d => ({ id: d.id, ...d.data() }));
     kgHesaplaVeCiz();
@@ -129,6 +134,7 @@ function kgAdresVarMi(tamAdres) {
 }
 
 async function kgKullanimEkle(){
+  if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
   const malzeme = document.getElementById('kg-u-malzeme').value.trim();
   const miktar = Number(document.getElementById('kg-u-miktar').value);
   const adres = document.getElementById('kg-u-adres').value.trim();
@@ -169,6 +175,7 @@ function kgKullanimDuzenle(id){
 }
 
 async function kgKullanimGuncelle(id) {
+    if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
     const malzeme = document.getElementById('duz-malzeme').value.trim();
     const miktar = Number(document.getElementById('duz-miktar').value);
     const adres = document.getElementById('duz-adres').value.trim();
@@ -209,6 +216,7 @@ function kgDuzAdresOneri(){
 }
 
 async function kgKullanimSil(id){
+  if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
   const u = kgKullanimlar.find(x => x.id === id);
   if (!u) return;
   appConfirm('Kaydı silmek istediğinize emin misiniz?', async () => {
@@ -262,6 +270,7 @@ function kgMalzemeDetay(id){
 }
 
 function kgMalzemeEkleModal(){
+  if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
   openModal('Malzeme Ekle', `<div class="grid3">
     <div><label class="f">Kod</label><input id="km-kod"></div>
     <div><label class="f">Ad *</label><input id="km-ad"></div>
@@ -273,6 +282,7 @@ function kgMalzemeEkleModal(){
 }
 
 async function kgMalzemeKaydet(){
+  if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
   const ad = document.getElementById('km-ad').value.trim();
   const bas = Number(document.getElementById('km-bas').value);
   if (!ad || isNaN(bas)) return toast('Ad ve başlangıç stok gerekli');
@@ -306,6 +316,7 @@ function kgMalzemeDuzenle(id){
 }
 
 async function kgMalzemeGuncelle(id){
+  if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
   const m = kgMalzemeler.find(x => x.id === id);
   const eskiBas = m ? Number(m.baslangic || 0) : 0;
   const ad = document.getElementById('em-ad').value.trim();
@@ -328,6 +339,7 @@ async function kgMalzemeGuncelle(id){
 }
 
 function kgMalzemeSil(id, ad){
+  if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
   const kullanimSayisi = kgKullanimlar.filter(u => trLower(u.malzeme) === trLower(ad)).length;
   let msg = '"' + ad + '" malzemesini silmek istediğinize emin misiniz?';
   if (kullanimSayisi > 0) msg += '<br>Bu malzemeye ait ' + kullanimSayisi + ' kullanım kaydı da silinecek!';
@@ -345,6 +357,7 @@ function kgExcelYukleModal(){
 }
 
 function kgExcelYukle(){
+  if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
   const f = document.getElementById('km-excel').files[0];
   if (!f) return toast('Dosya seçin');
   const reader = new FileReader();
@@ -374,6 +387,21 @@ function kgExcelYukle(){
 
 // ========== ADRES LİSTESİ (MAHALLE GRUPLU) ==========
 function kgRenderAdresler() {
+    // Eğer kgBolum seçili değilse hiç render etme
+    if (!kgBolum) {
+        document.getElementById('kg-adres').innerHTML = '<div class="muted">Lütfen önce bir bölge seçin.</div>';
+        return;
+    }
+
+    // kgAdresler boş veya tanımsız ise mesaj göster
+    if (!kgAdresler || kgAdresler.length === 0) {
+        document.getElementById('kg-adres').innerHTML = `
+            <div class="card"><div class="flex justify-between items-center"><h3>Adresler (0)</h3><div class="flex gap-2"><button class="btn btn-gray" onclick="kgAdresExcelYukleModal()"><i class="fa-solid fa-file-excel"></i> Excel Yükle</button><button class="btn btn-blue" onclick="kgAdresEkleModal()">+ Adres Ekle</button></div></div></div>
+            <div class="muted">Henüz adres yok.</div>
+        `;
+        return;
+    }
+
     const q = trLower(kgAdrQuery);
     const filtrelenmis = kgAdresler.filter(a => {
         if (!q) return true;
@@ -409,7 +437,7 @@ function kgRenderAdresler() {
         html += `</tbody></table></div>`;
     }
 
-    if (!html) html = '<div class="muted">Henüz adres yok.</div>';
+    if (!html) html = '<div class="muted">Aramanızla eşleşen adres yok.</div>';
 
     document.getElementById('kg-adres').innerHTML = `
         <div class="card"><div class="flex justify-between items-center"><h3>Adresler (${kgAdresler.length})</h3><div class="flex gap-2"><button class="btn btn-gray" onclick="kgAdresExcelYukleModal()"><i class="fa-solid fa-file-excel"></i> Excel Yükle</button><button class="btn btn-blue" onclick="kgAdresEkleModal()">+ Adres Ekle</button></div></div>
@@ -430,6 +458,7 @@ function kgAdresEkleModal() {
 }
 
 async function kgAdresKaydet() {
+    if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
     const mahalle = document.getElementById('ka-mahalle').value.trim();
     const adresDetay = document.getElementById('ka-adres').value.trim();
     if (!mahalle || !adresDetay) return toast('Mahalle ve adres detayı zorunludur.');
@@ -468,6 +497,7 @@ function kgAdresDuzenle(id) {
 }
 
 async function kgAdresGuncelle(id) {
+    if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
     const mahalle = document.getElementById('ea-mahalle').value.trim();
     const adresDetay = document.getElementById('ea-adres').value.trim();
     if (!mahalle || !adresDetay) return toast('Mahalle ve adres detayı boş olamaz.');
@@ -479,6 +509,7 @@ async function kgAdresGuncelle(id) {
 }
 
 function kgAdresSil(id){
+  if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
   appConfirm('Bu adresi silmek istediğinize emin misiniz?', async () => {
     await db.collection('adresler_' + kgBolum).doc(id).delete();
     toast('Adres silindi');
@@ -499,6 +530,7 @@ function kgAdresExcelYukleModal() {
 }
 
 async function kgAdresExcelYukle() {
+    if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
     const f = document.getElementById('ka-excel').files[0];
     if (!f) return toast('Dosya seçin');
     const reader = new FileReader();
