@@ -14,6 +14,10 @@ function detachListeners() {
 function anaMenuyuGoster() {
     detachListeners();
     var moduller = ['kullanim-modulu', 'ariza-modulu', 'kamera-modulu', 'depo-modulu', 'ayarlar-modulu'];
+    window.kgMatQuery = '';
+    window.kgAdrQuery = '';
+    window.kgHareketBas = '';
+    window.kgHareketSon = '';
     moduller.forEach(function (id) {
         document.getElementById(id).classList.add('gizli');
     });
