@@ -474,22 +474,35 @@ function kgAdresEkleModal() {
 }
 
 async function kgAdresKaydet() {
-    if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
-    const mahalle = formatText(document.getElementById('ea-mahalle').value);
-    const adresDetay = formatText(document.getElementById('ea-adres').value);
-    if (!mahalle || !adresDetay) return toast('Mahalle ve adres detayı zorunludur.');
+    if (!kgBolum) { toast('Önce bölge seçin'); return; }
+    
+    const mahalle = formatText(document.getElementById('ka-mahalle')?.value || '');
+    const adresDetay = formatText(document.getElementById('ka-adres')?.value || '');
+    
+    if (!mahalle || !adresDetay) {
+        toast('Mahalle ve adres detayı zorunludur.');
+        return;
+    }
 
-    // Aynı mahalle+adres kombinasyonu var mı?
-    const mevcut = kgAdresler.some(a => trLower(a.mahalle) === trLower(mahalle) && trLower(a.adres) === trLower(adresDetay));
-    if (mevcut) return toast('Bu adres zaten kayıtlı.');
+    const mevcut = kgAdresler.some(a =>
+        trLower(a.mahalle) === trLower(mahalle) && trLower(a.adres) === trLower(adresDetay)
+    );
+    if (mevcut) {
+        toast('Bu adres zaten kayıtlı.');
+        return;
+    }
 
-    await db.collection('adresler_' + kgBolum).add({
-        mahalle: mahalle,
-        adres: adresDetay,
-        onay: null
-    });
-    closeModal();
-    toast('Adres eklendi');
+    try {
+        await db.collection('adresler_' + kgBolum).add({
+            mahalle: mahalle,
+            adres: adresDetay,
+            onay: null
+        });
+        closeModal();
+        toast('Adres eklendi');
+    } catch (e) {
+        appAlert('Kayıt başarısız: ' + e.message);
+    }
 }
 
 // ========== ADRES DÜZENLEME ==========
