@@ -135,7 +135,7 @@ async function kgKullanimEkle(){
   const aciklama = document.getElementById('kg-u-aciklama').value.trim();
   const tarihIso = document.getElementById('kg-u-tarih').value || isoBugun();
   if (!malzeme || !miktar || !adres) return toast('Zorunlu alanları doldurun');
-  if (!kgMalzemeler.some(m => trLower(m.ad) === trLower(malzeme)) || !kgAdresler.some(a => trLower(a.ad) === trLower(adres))) return toast('Geçersiz malzeme/adres');
+  if (!kgMalzemeler.some(m => trLower(m.ad) === trLower(malzeme)) || !kgAdresVarMi(adres)) return toast('Geçersiz malzeme/adres');
   const n = nowTarih();
   await db.collection('kullanim_' + kgBolum).add({
     tarih: isoToDisplay(tarihIso), tarihISO: tarihIso, saat: n.saat,
@@ -168,18 +168,26 @@ function kgKullanimDuzenle(id){
   `);
 }
 
-async function kgKullanimGuncelle(id){
-  const malzeme = document.getElementById('duz-malzeme').value.trim();
-  const miktar = Number(document.getElementById('duz-miktar').value);
-  const adres = document.getElementById('duz-adres').value.trim();
-  const aciklama = document.getElementById('duz-aciklama').value.trim();
-  const tarihIso = document.getElementById('duz-tarih').value;
-  await db.collection('kullanim_' + kgBolum).doc(id).update({
-    malzeme, miktar, adres, aciklama,
-    tarih: isoToDisplay(tarihIso), tarihISO: tarihIso
-  });
-  closeModal();
-  toast('Güncellendi');
+async function kgKullanimGuncelle(id) {
+    const malzeme = document.getElementById('duz-malzeme').value.trim();
+    const miktar = Number(document.getElementById('duz-miktar').value);
+    const adres = document.getElementById('duz-adres').value.trim();
+    const aciklama = document.getElementById('duz-aciklama').value.trim();
+    const tarihIso = document.getElementById('duz-tarih').value;
+
+    // Zorunlu alan kontrolü
+    if (!malzeme || !miktar || !adres) return toast('Tüm zorunlu alanları doldurun.');
+
+    // Malzeme ve adres geçerlilik kontrolü
+    if (!kgMalzemeler.some(m => trLower(m.ad) === trLower(malzeme))) return toast('Geçersiz malzeme.');
+    if (!kgAdresVarMi(adres)) return toast('Geçersiz adres.');
+
+    await db.collection('kullanim_' + kgBolum).doc(id).update({
+        malzeme, miktar, adres, aciklama,
+        tarih: isoToDisplay(tarihIso), tarihISO: tarihIso
+    });
+    closeModal();
+    toast('Güncellendi');
 }
 
 function kgDuzMalzemeOneri(){
