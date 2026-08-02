@@ -48,6 +48,10 @@ function sifreGuncelle() {
 }
 
 auth.onAuthStateChanged(function (user) {
+    // Loader'ı gizle
+    var loader = document.getElementById('loader');
+    if (loader) loader.style.display = 'none';
+
     if (user) {
         window.aktifKullanici = user;
         document.getElementById('login-ekrani').classList.add('gizli');
