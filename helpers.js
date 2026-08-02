@@ -141,7 +141,6 @@ function renderSuggest(listEl, items, onPick, inputEl) {
     suggestActiveIndex = -1;
     var itDivs = listEl.querySelectorAll('.it');
 
-    // Önerilere tıklama
     itDivs.forEach(function (el) {
         el.onclick = function (e) {
             e.stopPropagation();
@@ -152,28 +151,34 @@ function renderSuggest(listEl, items, onPick, inputEl) {
         };
     });
 
-    // input'a sadece bir kez keydown dinleyicisi ekle
+    // Input'a sadece bir kez keydown dinleyicisi ekle (daha önce eklenmediyse)
     if (inputEl && !inputEl._suggestKeyBound) {
         inputEl._suggestKeyBound = true;
         inputEl.addEventListener('keydown', function (e) {
-            if (listEl.style.display === 'none') return;
+            // Şu anda görünen suggest listesini bul
+            var activeList = document.querySelector('.suggest-list[style*="block"]');
+            if (!activeList) return;
+
+            var items = activeList.querySelectorAll('.it');
+            if (items.length === 0) return;
+
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                suggestActiveIndex = Math.min(suggestActiveIndex + 1, itDivs.length - 1);
-                updateActive(itDivs);
+                suggestActiveIndex = Math.min(suggestActiveIndex + 1, items.length - 1);
+                updateActive(items);
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 suggestActiveIndex = Math.max(suggestActiveIndex - 1, 0);
-                updateActive(itDivs);
+                updateActive(items);
             } else if (e.key === 'Enter') {
                 e.preventDefault();
-                if (suggestActiveIndex >= 0 && suggestActiveIndex < itDivs.length) {
-                    itDivs[suggestActiveIndex].click();
+                if (suggestActiveIndex >= 0 && suggestActiveIndex < items.length) {
+                    items[suggestActiveIndex].click();
                 } else {
-                    listEl.style.display = 'none';
+                    activeList.style.display = 'none';
                 }
             }
-            // Diğer tüm tuşlara karışılmaz
+            // Diğer tüm tuşlar (harf, rakam, boşluk vs.) normal çalışır
         });
     }
 }
