@@ -6,10 +6,10 @@ let kgMalzemeler = [];
 let kgAdresler = [];
 let kgKullanimlar = [];
 let kgHareketler = [];
-let kgMatQuery = '';
-let kgAdrQuery = '';
-let kgHareketBas = '';
-let kgHareketSon = '';
+var kgMatQuery = '';
+var kgAdrQuery = '';
+var kgHareketBas = '';
+var kgHareketSon = '';
 
 function kgBaslat(){
   document.getElementById('kg-btn-alt').classList.remove('aktif');
