@@ -137,10 +137,9 @@ function clearSearchInputs() {
     });
 }
 
-// -------------------- YENİ SUGGEST SİSTEMİ (klavye dostu) --------------------
-var suggestActiveIndex = -1;
-var currentSuggestListEl = null;
-var currentSuggestItems = [];
+let suggestActiveIndex = -1;
+// Her input için ayrı bir keydown dinleyicisi atandı mı?
+const suggestBoundInputs = new WeakSet();
 
 function renderSuggest(listEl, items, onPick, inputEl) {
     if (!items.length) {
@@ -150,71 +149,62 @@ function renderSuggest(listEl, items, onPick, inputEl) {
         return;
     }
 
-    listEl.innerHTML = items.map(function (it, i) {
-        return '<div class="it" data-i="' + i + '">' + esc(it) + '</div>';
-    }).join('');
+    listEl.innerHTML = items.map((it, i) =>
+        `<div class="it" data-i="${i}">${esc(it)}</div>`
+    ).join('');
     listEl.style.display = 'block';
     suggestActiveIndex = -1;
-    currentSuggestListEl = listEl;
-    currentSuggestItems = items;
 
-    var itDivs = listEl.querySelectorAll('.it');
-    itDivs.forEach(function (el) {
-        el.onclick = function (e) {
+    const itDivs = listEl.querySelectorAll('.it');
+
+    itDivs.forEach(el => {
+        el.onclick = (e) => {
             e.stopPropagation();
             onPick(items[Number(el.dataset.i)]);
             listEl.style.display = 'none';
             suggestActiveIndex = -1;
-            currentSuggestListEl = null;
-            currentSuggestItems = [];
             if (inputEl) inputEl.focus();
         };
     });
-}
 
-// Global keydown dinleyicisi (tüm input'lar için tek bir yerden yönetiyoruz)
-document.addEventListener('keydown', function (e) {
-    if (!currentSuggestListEl || currentSuggestListEl.style.display === 'none') return;
+    // Input'a sadece bir kez keydown dinleyicisi ekle
+    if (inputEl && !suggestBoundInputs.has(inputEl)) {
+        suggestBoundInputs.add(inputEl);
+        inputEl.addEventListener('keydown', function(e) {
+            // Bu input'a ait şu anda açık olan listeyi bul
+            const activeList = inputEl.parentElement?.querySelector('.suggest-list');
+            if (!activeList || activeList.style.display !== 'block') return;
 
-    var items = currentSuggestListEl.querySelectorAll('.it');
-    if (items.length === 0) return;
+            const items = activeList.querySelectorAll('.it');
+            if (items.length === 0) return;
 
-    if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        suggestActiveIndex = Math.min(suggestActiveIndex + 1, items.length - 1);
-        updateActive(items);
-    } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        suggestActiveIndex = Math.max(suggestActiveIndex - 1, 0);
-        updateActive(items);
-    } else if (e.key === 'Enter') {
-        // Eğer bir öğe seçiliyse onu tıkla, yoksa listeyi kapat
-        if (suggestActiveIndex >= 0 && suggestActiveIndex < items.length) {
-            e.preventDefault();
-            items[suggestActiveIndex].click();
-        } else {
-            // Enter ile form gönderimini engellemeyelim, sadece listeyi kapat
-            currentSuggestListEl.style.display = 'none';
-            suggestActiveIndex = -1;
-        }
-    }
-    // Diğer tüm tuşlar normal işler, yazmayı engellemeyiz.
-});
-
-function updateActive(itDivs) {
-    itDivs.forEach(function (el, i) {
-        el.classList.toggle('active', i === suggestActiveIndex);
-    });
-}
-
-// Dışarı tıklayınca suggest listelerini kapat
-document.addEventListener('click', function (e) {
-    if (!e.target.closest('.suggest-wrap')) {
-        document.querySelectorAll('.suggest-list').forEach(function (l) {
-            l.style.display = 'none';
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                suggestActiveIndex = Math.min(suggestActiveIndex + 1, items.length - 1);
+                items.forEach((el, i) => el.classList.toggle('active', i === suggestActiveIndex));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                suggestActiveIndex = Math.max(suggestActiveIndex - 1, 0);
+                items.forEach((el, i) => el.classList.toggle('active', i === suggestActiveIndex));
+            } else if (e.key === 'Enter') {
+                if (suggestActiveIndex >= 0 && suggestActiveIndex < items.length) {
+                    e.preventDefault();
+                    items[suggestActiveIndex].click();
+                } else {
+                    // Enter ile listeyi kapat, formu engelleme
+                    activeList.style.display = 'none';
+                    suggestActiveIndex = -1;
+                }
+            }
+            // Diğer tuşlara (harf, rakam, boşluk) kesinlikle karışma
         });
+    }
+}
+
+// Dışarı tıklayınca tüm listeleri kapat
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.suggest-wrap')) {
+        document.querySelectorAll('.suggest-list').forEach(l => l.style.display = 'none');
         suggestActiveIndex = -1;
-        currentSuggestListEl = null;
-        currentSuggestItems = [];
     }
 });
