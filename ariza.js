@@ -1,13 +1,13 @@
-// ariza.js
+// arıza.js
 // Arıza Modülü
 
-let arBolum = 'alt';
-let arMalzemelerAlt = [];
-let arMalzemelerUst = [];
-let arAdreslerAlt = [];
-let arAdreslerUst = [];
-let arKayitlar = [];
-let arChips = [];
+var arBolum = 'alt';
+var arMalzemelerAlt = [];
+var arMalzemelerUst = [];
+var arAdreslerAlt = [];
+var arAdreslerUst = [];
+var arKayitlar = [];
+var arChips = [];
 
 function arizaBaslat(){
   document.getElementById('ariza-form-area').innerHTML = '<div class="muted">Yükleniyor...</div>';
@@ -41,7 +41,7 @@ function arizaFormCiz(){
     </div>
     <div class="grid3">
       <div class="suggest-wrap"><label class="f">Adres *</label><input id="ar-adres" autocomplete="off" oninput="arAdresOneriGoster()" onfocus="arAdresOneriGoster()"><div class="suggest-list" id="ar-adres-list"></div></div>
-      <div class="suggest-wrap"><label class="f">Arızalı Parça *</label><input id="ar-parca" autocomplete="off" placeholder="Yazın, seçin ya da Enter'a basın" oninput="arParcaOneriGoster()" onfocus="arParcaOneriGoster()" onkeydown="arParcaKeydown(event)"><div class="suggest-list" id="ar-parca-list"></div><div id="ar-parca-chips" class="mt-2"></div></div>
+      <div class="suggest-wrap"><label class="f">Arızalı Parça *</label><input id="ar-parca" autocomplete="off" placeholder="Yazın, seçin ya da Enter'a basın" oninput="arParcaOneriGoster()" onfocus="arParcaOneriGoster()"><div class="suggest-list" id="ar-parca-list"></div><div id="ar-parca-chips" class="mt-2"></div></div>
       <div><label class="f">Adet (genel)</label><input id="ar-adet" type="number" min="1" step="1" value="1"></div>
       <div><label class="f">Hedef Tarih</label><input id="ar-hedef" type="date"></div>
       <div style="grid-column:1/-1"><label class="f">Açıklama</label><input id="ar-aciklama"></div>
@@ -86,6 +86,7 @@ function arParcaKeydown(e){
 function arChipEkle(v){
   v = (v != null ? v : document.getElementById('ar-parca').value).trim();
   if (!v) return;
+  v = formatText(v); // 🔤 Her parçanın ilk harfi büyük
   if (arChips.some(x => trLower(x.ad) === trLower(v))) {
     toast('Bu parça zaten eklendi');
     return;
@@ -109,10 +110,10 @@ function arChipsCiz(){
 }
 
 async function arizaKaydet(){
-  const adres = document.getElementById('ar-adres').value.trim();
+  const adres = formatText(document.getElementById('ar-adres').value); // 🔤
   const genelAdet = Number(document.getElementById('ar-adet').value);
   const hedef = document.getElementById('ar-hedef').value;
-  const aciklama = document.getElementById('ar-aciklama').value.trim();
+  const aciklama = formatText(document.getElementById('ar-aciklama').value); // 🔤
   if (document.getElementById('ar-parca').value.trim()) arChipEkle();
   if (!adres || arChips.length === 0) return toast('Adres ve en az bir parça girin');
   const n = nowTarih();
@@ -211,14 +212,14 @@ async function arizaGuncelle(id){
   if (yeniAdlar.length === 0) { toast('En az bir parça girin'); return; }
   const yeniParcalar = yeniAdlar.map(ad => {
     const eski = (a.parcalar || []).find(p => trLower(p.ad) === trLower(ad));
-    return { ad, adet: eski ? eski.adet : 1, tamam: eski ? eski.tamam : false };
+    return { ad: formatText(ad), adet: eski ? eski.adet : 1, tamam: eski ? eski.tamam : false }; // 🔤 formatText eklenir
   });
   const tumuTamam = yeniParcalar.every(p => p.tamam);
   const update = {
-    adres: document.getElementById('ea2-adres').value.trim(),
+    adres: formatText(document.getElementById('ea2-adres').value), // 🔤
     genelAdet: Number(document.getElementById('ea2-adet').value) || 1,
     hedefTarih: document.getElementById('ea2-hedef').value,
-    aciklama: document.getElementById('ea2-aciklama').value.trim(),
+    aciklama: formatText(document.getElementById('ea2-aciklama').value), // 🔤
     parcalar: yeniParcalar,
     durum: tumuTamam ? 'Tamamlandı' : 'Açık'
   };
