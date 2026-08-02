@@ -1,4 +1,4 @@
-// helpers.js – Ortak yardımcı fonksiyonlar (Klavye sorunu çözüldü)
+// helpers.js – Klavye sorunu çözülmüş, yazmayı engellemeyen suggest
 
 // Toast bildirimi
 function toast(msg) {
@@ -139,20 +139,16 @@ function clearSearchInputs() {
   });
 }
 
-// ======================= YENİ SUGGEST SİSTEMİ (KESİN ÇÖZÜM) =======================
-let suggestActiveIndex = -1;
-let currentSuggestListEl = null;
-let currentSuggestItems = [];
+// ======================= BASİT VE SORUNSUZ SUGGEST =======================
+var currentSuggest = null; // { listEl, items, onPick, inputEl }
 
 function renderSuggest(listEl, items, onPick, inputEl) {
   if (!items.length) {
     listEl.style.display = 'none';
     listEl.innerHTML = '';
-    if (currentSuggestListEl === listEl) {
-      currentSuggestListEl = null;
-      currentSuggestItems = [];
+    if (currentSuggest && currentSuggest.listEl === listEl) {
+      currentSuggest = null;
     }
-    suggestActiveIndex = -1;
     return;
   }
 
@@ -160,61 +156,64 @@ function renderSuggest(listEl, items, onPick, inputEl) {
     '<div class="it" data-i="' + i + '">' + esc(it) + '</div>'
   ).join('');
   listEl.style.display = 'block';
-  suggestActiveIndex = -1;
-  currentSuggestListEl = listEl;
-  currentSuggestItems = items;
 
-  const itDivs = listEl.querySelectorAll('.it');
+  // Güncel listeyi global değişkene kaydet
+  currentSuggest = {
+    listEl: listEl,
+    items: items,
+    onPick: onPick,
+    inputEl: inputEl
+  };
+
+  var itDivs = listEl.querySelectorAll('.it');
   itDivs.forEach(function (el) {
     el.onclick = function (e) {
       e.stopPropagation();
       onPick(items[Number(el.dataset.i)]);
       listEl.style.display = 'none';
-      suggestActiveIndex = -1;
-      currentSuggestListEl = null;
-      currentSuggestItems = [];
+      currentSuggest = null;
       if (inputEl) inputEl.focus();
     };
   });
 }
 
-// Global keydown dinleyicisi – input'ların yazmasını ENGELLEMEZ
+// Global keydown dinleyicisi – input'un yazmasına ASLA karışmaz
 document.addEventListener('keydown', function (e) {
-  if (!currentSuggestListEl || currentSuggestListEl.style.display !== 'block') return;
+  if (!currentSuggest) return;
+  var listEl = currentSuggest.listEl;
+  if (!listEl || listEl.style.display !== 'block') return;
 
-  const items = currentSuggestListEl.querySelectorAll('.it');
+  var items = listEl.querySelectorAll('.it');
   if (items.length === 0) return;
+
+  var activeIndex = -1;
+  items.forEach(function (el, i) {
+    if (el.classList.contains('active')) activeIndex = i;
+  });
 
   if (e.key === 'ArrowDown') {
     e.preventDefault();
-    suggestActiveIndex = Math.min(suggestActiveIndex + 1, items.length - 1);
-    updateActive(items);
+    activeIndex = activeIndex < items.length - 1 ? activeIndex + 1 : 0;
+    items.forEach(function (el, i) { el.classList.toggle('active', i === activeIndex); });
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
-    suggestActiveIndex = Math.max(suggestActiveIndex - 1, 0);
-    updateActive(items);
+    activeIndex = activeIndex > 0 ? activeIndex - 1 : items.length - 1;
+    items.forEach(function (el, i) { el.classList.toggle('active', i === activeIndex); });
   } else if (e.key === 'Enter') {
-    if (suggestActiveIndex >= 0 && suggestActiveIndex < items.length) {
-      e.preventDefault();
-      items[suggestActiveIndex].click();
+    e.preventDefault();
+    if (activeIndex >= 0 && activeIndex < items.length) {
+      items[activeIndex].click();
     } else {
-      currentSuggestListEl.style.display = 'none';
-      suggestActiveIndex = -1;
+      listEl.style.display = 'none';
+      currentSuggest = null;
     }
   }
-  // Diğer tüm tuşlara (harf, rakam, boşluk) karışılmaz → yazma devam eder
 });
-
-function updateActive(itDivs) {
-  itDivs.forEach((el, i) => el.classList.toggle('active', i === suggestActiveIndex));
-}
 
 // Dışarı tıklayınca tüm listeleri kapat
 document.addEventListener('click', function (e) {
   if (!e.target.closest('.suggest-wrap')) {
     document.querySelectorAll('.suggest-list').forEach(l => l.style.display = 'none');
-    suggestActiveIndex = -1;
-    currentSuggestListEl = null;
-    currentSuggestItems = [];
+    currentSuggest = null;
   }
 });
