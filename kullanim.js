@@ -32,6 +32,12 @@ function kgBolgeSec(b){
   kgMatQuery = '';
   kgAdrQuery = '';
   kgDinleyicileriKur();
+  setTimeout(() => {
+    const aktifTab = document.querySelector('#kullanim-modulu .tab-btn.aktif');
+    if (aktifTab && aktifTab.dataset.kgtab === 'adres') {
+      kgRenderAdresler();
+    }
+  }, 100);
 }
 
 function kgBolumLabel(b){ return b === 'ust' ? 'E5 Üstü' : 'E5 Altı'; }
@@ -409,17 +415,8 @@ function kgRenderAdresler() {
     if (document.getElementById('kg-adr-ara')) {
         document.getElementById('kg-adr-ara').value = '';
     }
-
-    // Bölge seçili değilse açıklama mesajı göster, ama kartı da göster ki kullanıcı butonları görsün
-    if (!kgBolum) {
-        document.getElementById('kg-adres').innerHTML = `
-            <div class="card"><div class="flex justify-between items-center"><h3>Adresler</h3></div></div>
-            <div class="muted">Lütfen yukarıdan bir bölge seçin.</div>
-        `;
-        return;
-    }
         // kgAdresler boş veya tanımsız ise mesaj göster
-    if (!kgAdresler || kgAdresler.length === 0) {
+   if (!kgAdresler || kgAdresler.length === 0) {
         document.getElementById('kg-adres').innerHTML = `
             <div class="card"><div class="flex justify-between items-center"><h3>Adresler (0)</h3><div class="flex gap-2"><button class="btn btn-gray" onclick="kgAdresExcelYukleModal()"><i class="fa-solid fa-file-excel"></i> Excel Yükle</button><button class="btn btn-blue" onclick="kgAdresEkleModal()">+ Adres Ekle</button></div></div></div>
             <div class="muted">Henüz adres yok.</div>
