@@ -256,6 +256,9 @@ function kgAdresGecmis(adres){
 
 // Malzeme sekmesi
 function kgRenderMalzemeTablo(){
+  if (document.getElementById('kg-mat-ara')) {
+        document.getElementById('kg-mat-ara').value = '';
+    }
   const q = trLower(kgMatQuery);
   const list = kgMalzemelerHesaplanmis().filter(m => !q || trLower(m.kod + ' ' + m.ad + ' ' + (m.aciklama || '')).indexOf(q) > -1);
   let rows = list.map(m => `<tr>
@@ -396,6 +399,10 @@ function kgExcelYukle(){
 
 // ========== ADRES LİSTESİ (MAHALLE GRUPLU) ==========
 function kgRenderAdresler() {
+    // Arama kutusunu sıfırla (güvenlik için)
+    if (document.getElementById('kg-adr-ara')) {
+        document.getElementById('kg-adr-ara').value = '';
+    }
     // Eğer kgBolum seçili değilse hiç render etme
     if (!kgBolum) {
         document.getElementById('kg-adres').innerHTML = '<div class="muted">Lütfen önce bir bölge seçin.</div>';
