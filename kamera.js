@@ -1,7 +1,7 @@
 // kamera.js
 // Kamera Modülü
 
-let kameralar = [];
+var kameralar = [];
 
 function kameraBaslat() {
     document.getElementById('kamera-liste').innerHTML = '<div class="muted">Yükleniyor...</div>';
@@ -65,13 +65,13 @@ function openKameraAddModal() {
 
 function kameraFormOku() {
     return {
-        adres: document.getElementById('ka-adres').value.trim(),
+        adres: formatText(document.getElementById('ka-adres').value),  // 🔤
         telefon: document.getElementById('ka-telefon').value.trim(),
         seriNo: document.getElementById('ka-seriNo').value.trim(),
         ip: document.getElementById('ka-ip').value.trim(),
         nvrIp: document.getElementById('ka-nvrIp').value.trim(),
         simkart: document.getElementById('ka-simkart').value.trim(),
-        aciklama: document.getElementById('ka-aciklama').value.trim()
+        aciklama: formatText(document.getElementById('ka-aciklama').value)  // 🔤
     };
 }
 
@@ -125,13 +125,13 @@ async function kameraExcelYukle() {
             const row = json[i];
             if (!row[0]) continue;
             batch.set(db.collection('kameralar').doc(), {
-                adres: String(row[0] || ''),
+                adres: formatText(String(row[0] || '')),  // 🔤
                 telefon: String(row[1] || ''),
                 seriNo: String(row[2] || ''),
                 ip: String(row[3] || ''),
                 nvrIp: String(row[4] || ''),
                 simkart: String(row[5] || ''),
-                aciklama: String(row[6] || '')
+                aciklama: formatText(String(row[6] || ''))  // 🔤
             });
         }
         await batch.commit();
