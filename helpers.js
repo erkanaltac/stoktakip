@@ -1,3 +1,6 @@
+// helpers.js
+// Ortak yardımcı fonksiyonlar
+
 // Toast bildirimi
 function toast(msg) {
     const t = document.getElementById('toast');
@@ -18,6 +21,17 @@ function esc(s) {
 // Türkçe küçük harf
 function trLower(s) {
     return String(s || '').toLocaleLowerCase('tr');
+}
+
+// İlk harfleri büyük, diğerleri küçük yap
+function formatText(str) {
+    return String(str || '')
+        .trim()
+        .replace(/\s+/g, ' ')                // fazla boşlukları tek boşluğa indir
+        .toLocaleLowerCase('tr')
+        .replace(/(^|\s)\S/g, function(c) { // her kelimenin ilk harfini büyült
+            return c.toLocaleUpperCase('tr');
+        });
 }
 
 // İki haneli sayı
@@ -123,8 +137,10 @@ function clearSearchInputs() {
     });
 }
 
-// Gelişmiş suggest (arama önerileri) – klavye ile gezinme düzeltildi
+// -------------------- YENİ SUGGEST SİSTEMİ (klavye dostu) --------------------
 var suggestActiveIndex = -1;
+var currentSuggestListEl = null;
+var currentSuggestItems = [];
 
 function renderSuggest(listEl, items, onPick, inputEl) {
     if (!items.length) {
@@ -139,48 +155,56 @@ function renderSuggest(listEl, items, onPick, inputEl) {
     }).join('');
     listEl.style.display = 'block';
     suggestActiveIndex = -1;
-    var itDivs = listEl.querySelectorAll('.it');
+    currentSuggestListEl = listEl;
+    currentSuggestItems = items;
 
+    var itDivs = listEl.querySelectorAll('.it');
     itDivs.forEach(function (el) {
         el.onclick = function (e) {
             e.stopPropagation();
             onPick(items[Number(el.dataset.i)]);
             listEl.style.display = 'none';
             suggestActiveIndex = -1;
+            currentSuggestListEl = null;
+            currentSuggestItems = [];
             if (inputEl) inputEl.focus();
         };
     });
+}
 
-    // Input'a sadece bir kez keydown dinleyicisi ekle (daha önce eklenmediyse)
-    if (inputEl && !inputEl._suggestKeyBound) {
-        inputEl._suggestKeyBound = true;
-        inputEl.addEventListener('keydown', function (e) {
-            // Şu anda görünen suggest listesini bul
-            var activeList = document.querySelector('.suggest-list[style*="block"]');
-            if (!activeList) return;
+// Global keydown dinleyicisi (tüm input'lar için tek bir yerden yönetiyoruz)
+document.addEventListener('keydown', function (e) {
+    if (!currentSuggestListEl || currentSuggestListEl.style.display === 'none') return;
 
-            var items = activeList.querySelectorAll('.it');
-            if (items.length === 0) return;
+    var items = currentSuggestListEl.querySelectorAll('.it');
+    if (items.length === 0) return;
 
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                suggestActiveIndex = Math.min(suggestActiveIndex + 1, items.length - 1);
-                updateActive(items);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                suggestActiveIndex = Math.max(suggestActiveIndex - 1, 0);
-                updateActive(items);
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                if (suggestActiveIndex >= 0 && suggestActiveIndex < items.length) {
-                    items[suggestActiveIndex].click();
-                } else {
-                    activeList.style.display = 'none';
-                }
-            }
-            // Diğer tüm tuşlar (harf, rakam, boşluk vs.) normal çalışır
-        });
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        suggestActiveIndex = Math.min(suggestActiveIndex + 1, items.length - 1);
+        updateActive(items);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        suggestActiveIndex = Math.max(suggestActiveIndex - 1, 0);
+        updateActive(items);
+    } else if (e.key === 'Enter') {
+        // Eğer bir öğe seçiliyse onu tıkla, yoksa listeyi kapat
+        if (suggestActiveIndex >= 0 && suggestActiveIndex < items.length) {
+            e.preventDefault();
+            items[suggestActiveIndex].click();
+        } else {
+            // Enter ile form gönderimini engellemeyelim, sadece listeyi kapat
+            currentSuggestListEl.style.display = 'none';
+            suggestActiveIndex = -1;
+        }
     }
+    // Diğer tüm tuşlar normal işler, yazmayı engellemeyiz.
+});
+
+function updateActive(itDivs) {
+    itDivs.forEach(function (el, i) {
+        el.classList.toggle('active', i === suggestActiveIndex);
+    });
 }
 
 // Dışarı tıklayınca suggest listelerini kapat
@@ -189,5 +213,8 @@ document.addEventListener('click', function (e) {
         document.querySelectorAll('.suggest-list').forEach(function (l) {
             l.style.display = 'none';
         });
+        suggestActiveIndex = -1;
+        currentSuggestListEl = null;
+        currentSuggestItems = [];
     }
 });
