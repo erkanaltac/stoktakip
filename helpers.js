@@ -133,6 +133,7 @@ function renderSuggest(listEl, items, onPick, inputEl) {
         suggestActiveIndex = -1;
         return;
     }
+
     listEl.innerHTML = items.map(function (it, i) {
         return '<div class="it" data-i="' + i + '">' + esc(it) + '</div>';
     }).join('');
@@ -140,7 +141,7 @@ function renderSuggest(listEl, items, onPick, inputEl) {
     suggestActiveIndex = -1;
     var itDivs = listEl.querySelectorAll('.it');
 
-    // Her öneriye tıklama olayı
+    // Önerilere tıklama
     itDivs.forEach(function (el) {
         el.onclick = function (e) {
             e.stopPropagation();
@@ -151,38 +152,30 @@ function renderSuggest(listEl, items, onPick, inputEl) {
         };
     });
 
-    // Klavye olaylarını input'a bağla
-    if (inputEl) {
-        inputEl.onkeydown = function (e) {
+    // input'a sadece bir kez keydown dinleyicisi ekle
+    if (inputEl && !inputEl._suggestKeyBound) {
+        inputEl._suggestKeyBound = true;
+        inputEl.addEventListener('keydown', function (e) {
             if (listEl.style.display === 'none') return;
-
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                e.stopPropagation();
                 suggestActiveIndex = Math.min(suggestActiveIndex + 1, itDivs.length - 1);
                 updateActive(itDivs);
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                e.stopPropagation();
                 suggestActiveIndex = Math.max(suggestActiveIndex - 1, 0);
                 updateActive(itDivs);
             } else if (e.key === 'Enter') {
                 e.preventDefault();
-                e.stopPropagation();
                 if (suggestActiveIndex >= 0 && suggestActiveIndex < itDivs.length) {
                     itDivs[suggestActiveIndex].click();
                 } else {
                     listEl.style.display = 'none';
                 }
             }
-        };
+            // Diğer tüm tuşlara karışılmaz
+        });
     }
-}
-
-function updateActive(itDivs) {
-    itDivs.forEach(function (el, i) {
-        el.classList.toggle('active', i === suggestActiveIndex);
-    });
 }
 
 // Dışarı tıklayınca suggest listelerini kapat
