@@ -1,4 +1,4 @@
-// helpers.js – Klavye sorunu çözülmüş, yazmayı engellemeyen suggest
+// helpers.js – Klavye sorunu KALICI olarak çözüldü
 
 // Toast bildirimi
 function toast(msg) {
@@ -139,8 +139,8 @@ function clearSearchInputs() {
   });
 }
 
-// ======================= BASİT VE SORUNSUZ SUGGEST =======================
-var currentSuggest = null; // { listEl, items, onPick, inputEl }
+// ======================= YENİ NESİL SUGGEST (YAZMA ENGELLENMEZ) =======================
+let currentSuggest = null; // { listEl, items, onPick }
 
 function renderSuggest(listEl, items, onPick, inputEl) {
   if (!items.length) {
@@ -153,56 +153,51 @@ function renderSuggest(listEl, items, onPick, inputEl) {
   }
 
   listEl.innerHTML = items.map((it, i) =>
-    '<div class="it" data-i="' + i + '">' + esc(it) + '</div>'
+    `<div class="it" data-i="${i}">${esc(it)}</div>`
   ).join('');
   listEl.style.display = 'block';
 
   // Güncel listeyi global değişkene kaydet
-  currentSuggest = {
-    listEl: listEl,
-    items: items,
-    onPick: onPick,
-    inputEl: inputEl
-  };
+  currentSuggest = { listEl, items, onPick };
 
-  var itDivs = listEl.querySelectorAll('.it');
-  itDivs.forEach(function (el) {
+  const itDivs = listEl.querySelectorAll('.it');
+  itDivs.forEach(el => {
     el.onclick = function (e) {
       e.stopPropagation();
       onPick(items[Number(el.dataset.i)]);
       listEl.style.display = 'none';
       currentSuggest = null;
-      if (inputEl) inputEl.focus();
+      // Mobilde klavye açıp kapamaya zorlamıyoruz
     };
   });
 }
 
-// Global keydown dinleyicisi – input'un yazmasına ASLA karışmaz
+// TEK BİR global keydown dinleyicisi – input'un yazmasına ASLA KARIŞMAZ
 document.addEventListener('keydown', function (e) {
   if (!currentSuggest) return;
-  var listEl = currentSuggest.listEl;
+  const { listEl, items, onPick } = currentSuggest;
   if (!listEl || listEl.style.display !== 'block') return;
 
-  var items = listEl.querySelectorAll('.it');
-  if (items.length === 0) return;
+  const activeItems = listEl.querySelectorAll('.it');
+  if (activeItems.length === 0) return;
 
-  var activeIndex = -1;
-  items.forEach(function (el, i) {
-    if (el.classList.contains('active')) activeIndex = i;
+  let activeIdx = -1;
+  activeItems.forEach((el, i) => {
+    if (el.classList.contains('active')) activeIdx = i;
   });
 
   if (e.key === 'ArrowDown') {
     e.preventDefault();
-    activeIndex = activeIndex < items.length - 1 ? activeIndex + 1 : 0;
-    items.forEach(function (el, i) { el.classList.toggle('active', i === activeIndex); });
+    activeIdx = activeIdx < activeItems.length - 1 ? activeIdx + 1 : 0;
+    activeItems.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
   } else if (e.key === 'ArrowUp') {
     e.preventDefault();
-    activeIndex = activeIndex > 0 ? activeIndex - 1 : items.length - 1;
-    items.forEach(function (el, i) { el.classList.toggle('active', i === activeIndex); });
+    activeIdx = activeIdx > 0 ? activeIdx - 1 : activeItems.length - 1;
+    activeItems.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
   } else if (e.key === 'Enter') {
     e.preventDefault();
-    if (activeIndex >= 0 && activeIndex < items.length) {
-      items[activeIndex].click();
+    if (activeIdx >= 0 && activeIdx < activeItems.length) {
+      activeItems[activeIdx].click();
     } else {
       listEl.style.display = 'none';
       currentSuggest = null;
