@@ -1,4 +1,4 @@
-// helpers.js – Klavye sorunu kökten çözüldü
+// helpers.js – Klavye sorunu çözüldü + Tüm yardımcı fonksiyonlar
 
 // Toast bildirimi
 function toast(msg) {
@@ -139,45 +139,87 @@ function clearSearchInputs() {
   });
 }
 
-// ======================= BASİT SUGGEST (YAZMA ENGELLENMEZ) =======================
-// Klavye navigasyonu istenirse daha sonra eklenebilir, şimdilik sadece tıklama ile seçim.
-var currentSuggest = null;
+// ======================= SUGGEST SİSTEMİ (YAZMA ENGELLENMEZ, OK TUŞLARI ÇALIŞIR) =======================
+let currentSuggest = null; // { listEl, items, onPick, activeIndex }
 
 function renderSuggest(listEl, items, onPick, inputEl) {
   if (!items.length) {
     listEl.style.display = 'none';
     listEl.innerHTML = '';
-    currentSuggest = null;
+    if (currentSuggest && currentSuggest.listEl === listEl) {
+      currentSuggest = null;
+    }
     return;
   }
 
-  listEl.innerHTML = items.map((it, i) =>
-    '<div class="it" data-i="' + i + '">' + esc(it) + '</div>'
-  ).join('');
+  listEl.innerHTML = items
+    .map((it, i) => '<div class="it" data-i="' + i + '">' + esc(it) + '</div>')
+    .join('');
   listEl.style.display = 'block';
 
-  // Tıklama olayı
-  var itDivs = listEl.querySelectorAll('.it');
+  // Güncel listeyi global değişkene kaydet
+  currentSuggest = {
+    listEl: listEl,
+    items: items,
+    onPick: onPick,
+    activeIndex: -1
+  };
+
+  const itDivs = listEl.querySelectorAll('.it');
   itDivs.forEach(function (el) {
     el.onclick = function (e) {
       e.stopPropagation();
       onPick(items[Number(el.dataset.i)]);
       listEl.style.display = 'none';
       currentSuggest = null;
-      // Mobilde klavyeyi kapatmaya zorlamıyoruz
     };
   });
-
-  // En son açılan listeyi kaydet (dışarı tıklayınca kapamak için)
-  currentSuggest = listEl;
 }
+
+// Tek bir global keydown dinleyicisi – input'a ASLA karışmaz
+document.addEventListener('keydown', function (e) {
+  if (!currentSuggest) return;
+  const { listEl, items, onPick } = currentSuggest;
+  if (!listEl || listEl.style.display !== 'block') return;
+
+  const activeItems = listEl.querySelectorAll('.it');
+  if (activeItems.length === 0) return;
+
+  // Mevcut aktif öğeyi bul
+  let activeIdx = -1;
+  activeItems.forEach((el, i) => {
+    if (el.classList.contains('active')) activeIdx = i;
+  });
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    e.stopPropagation();
+    activeIdx = activeIdx < activeItems.length - 1 ? activeIdx + 1 : 0;
+    activeItems.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+    currentSuggest.activeIndex = activeIdx;
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    e.stopPropagation();
+    activeIdx = activeIdx > 0 ? activeIdx - 1 : activeItems.length - 1;
+    activeItems.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+    currentSuggest.activeIndex = activeIdx;
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    e.stopPropagation();
+    if (activeIdx >= 0 && activeIdx < activeItems.length) {
+      activeItems[activeIdx].click();
+    } else {
+      listEl.style.display = 'none';
+      currentSuggest = null;
+    }
+  }
+  // Diğer tüm tuşlar (harf, rakam, boşluk) olduğu gibi çalışır – yazma engellenmez
+});
 
 // Dışarı tıklayınca tüm listeleri kapat
 document.addEventListener('click', function (e) {
   if (!e.target.closest('.suggest-wrap')) {
-    document.querySelectorAll('.suggest-list').forEach(function (l) {
-      l.style.display = 'none';
-    });
+    document.querySelectorAll('.suggest-list').forEach(l => l.style.display = 'none');
     currentSuggest = null;
   }
 });
