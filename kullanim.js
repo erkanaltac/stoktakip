@@ -227,9 +227,11 @@ function kgDuzMalzemeOneri(){
   }, document.getElementById('duz-malzeme'));
 }
 
+// DÜZELTİLDİ: kgAdresler öğelerinde "ad" alanı YOK — "mahalle" + "adres" var.
+// Eski kod "a.ad" okuduğu için bu kutuda öneri listesi her zaman boş/undefined geliyordu.
 function kgDuzAdresOneri(){
   const val = trLower(document.getElementById('duz-adres').value.trim());
-  const all = kgAdresler.map(a => a.ad);
+  const all = kgAdresler.map(a => ((a.mahalle || '') + ' ' + (a.adres || '')).trim()).filter(Boolean);
   const matches = val ? all.filter(a => trLower(a).indexOf(val) > -1) : all.slice(0, 6);
   renderSuggest(document.getElementById('duz-adres-list'), matches.slice(0, 8), v => {
     document.getElementById('duz-adres').value = v;
