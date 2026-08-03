@@ -1,4 +1,7 @@
 // helpers.js – Klavye sorunu çözüldü + Tüm yardımcı fonksiyonlar
+// GÜNCELLEME: Öneri (suggest) listeleri artık hangi input'a ait olduğunu
+// hatırlıyor. Böylece Tab ile başka bir alana geçildiğinde eski listenin
+// ok tuşu / Enter tuşunu "çalması" (klavye kayması) engellendi.
 
 // Toast bildirimi
 function toast(msg) {
@@ -139,8 +142,11 @@ function clearSearchInputs() {
   });
 }
 
-// ======================= SUGGEST SİSTEMİ (YAZMA ENGELLENMEZ, OK TUŞLARI ÇALIŞIR) =======================
-let currentSuggest = null; // { listEl, items, onPick, activeIndex }
+// ======================= SUGGEST SİSTEMİ (DÜZELTİLMİŞ) =======================
+// currentSuggest artık hangi input elemanına ait olduğunu (inputEl) da tutuyor.
+// Bu sayede: (1) Tab ile başka alana geçildiğinde eski liste kapanıyor,
+// (2) klavye olayı sadece o anda odaklanılmış olan alanın listesine uygulanıyor.
+let currentSuggest = null; // { listEl, items, onPick, inputEl, activeIndex }
 
 function renderSuggest(listEl, items, onPick, inputEl) {
   if (!items.length) {
@@ -162,6 +168,7 @@ function renderSuggest(listEl, items, onPick, inputEl) {
     listEl: listEl,
     items: items,
     onPick: onPick,
+    inputEl: inputEl || null,
     activeIndex: -1
   };
 
@@ -174,13 +181,33 @@ function renderSuggest(listEl, items, onPick, inputEl) {
       currentSuggest = null;
     };
   });
+
+  // Input, odağını kaybettiğinde (Tab ile geçiş, tıklama vb.) listeyi kapat.
+  // Küçük bir gecikme veriyoruz ki bir öneriye TIKLAMA olayı önce işlensin.
+  if (inputEl && !inputEl.dataset.suggestBlurBound) {
+    inputEl.dataset.suggestBlurBound = '1';
+    inputEl.addEventListener('blur', function () {
+      setTimeout(function () {
+        if (currentSuggest && currentSuggest.inputEl === inputEl) {
+          listEl.style.display = 'none';
+          currentSuggest = null;
+        }
+      }, 150);
+    });
+  }
 }
 
 // Tek bir global keydown dinleyicisi – input'a ASLA karışmaz
 document.addEventListener('keydown', function (e) {
   if (!currentSuggest) return;
-  const { listEl, items, onPick } = currentSuggest;
+  const { listEl, items, onPick, inputEl } = currentSuggest;
   if (!listEl || listEl.style.display !== 'block') return;
+
+  // KRİTİK DÜZELTME: Bu liste, o anda klavye odağında olan alana ait değilse
+  // (örn. Tab ile başka bir kutuya geçilmiş ama eski liste kapanmamışsa),
+  // bu tuşa hiç dokunma. Eski hatada başka bir kutudaki Ok/Enter tuşu
+  // yanlışlıkla ilgisiz bir öneri listesini kontrol ediyordu.
+  if (inputEl && document.activeElement !== inputEl) return;
 
   const activeItems = listEl.querySelectorAll('.it');
   if (activeItems.length === 0) return;
