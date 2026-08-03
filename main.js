@@ -40,6 +40,7 @@ function ekranGoster(ekranId) {
     if (ekranId === 'ariza-modulu') arizaBaslat();
     if (ekranId === 'kamera-modulu') kameraBaslat();
     if (ekranId === 'depo-modulu') depoBaslat();
+    if (ekranId === 'ayarlar-modulu' && typeof yedeklemeBaslat === 'function') yedeklemeBaslat();
 
     clearSearchInputs();
 }
@@ -96,11 +97,22 @@ function kullaniciTercihleriniKaydet() {
 }
 
 // Kullanıcı adına 5 kez tıklama sayacı (geliştirici popup)
-var gelistiriciClickCount = 0;
-document.getElementById('kullanici-bilgisi').addEventListener('click', function () {
-    gelistiriciClickCount++;
-    if (gelistiriciClickCount === 5) {
-        gelistiriciClickCount = 0;
-        appAlert('geliştirici erkan altaç için mutlaka destek paketi hazırla', 'Bilgi');
-    }
+// DÜZELTME: Bu dosya <head> içinde, <body> henüz oluşmadan çalıştığı için
+// document.getElementById('kullanici-bilgisi') o anda "null" dönüyor ve
+// .addEventListener çağrısı sayfa her açıldığında konsola hata atıyordu.
+// Bu tıklama olayı zaten auth.js -> onAuthStateChanged içinde, kullanıcı
+// giriş yaptıktan ve DOM tamamen hazır olduktan sonra doğru şekilde
+// tekrar bağlanıyor; bu yüzden burada güvenli hale getirip DOMContentLoaded
+// içine alıyoruz (artık hata atmayacak, işlevsellik auth.js'te duruyor).
+document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('kullanici-bilgisi');
+    if (!el) return;
+    var gelistiriciClickCount = 0;
+    el.addEventListener('click', function () {
+        gelistiriciClickCount++;
+        if (gelistiriciClickCount === 5) {
+            gelistiriciClickCount = 0;
+            appAlert('Geliştirici Erkan Altaç için mutlaka destek paketi hazırla :)', 'Bilgi');
+        }
+    });
 });
