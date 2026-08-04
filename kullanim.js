@@ -32,12 +32,6 @@ function kgBolgeSec(b){
   kgMatQuery = '';
   kgAdrQuery = '';
   kgDinleyicileriKur();
-  setTimeout(() => {
-    const aktifTab = document.querySelector('#kullanim-modulu .tab-btn.aktif');
-    if (aktifTab && aktifTab.dataset.kgtab === 'adres') {
-      kgRenderAdresler();
-    }
-  }, 100);
 }
 
 function kgBolumLabel(b){ return b === 'ust' ? 'E5 Üstü' : 'E5 Altı'; }
@@ -50,47 +44,48 @@ function kgDinleyicileriKur(){
   kgHareketler = [];
 
   const bolumAd = kgBolumLabel(kgBolum);
-  const un1 = db.collection('malzemeler_' + kgBolum).onSnapshot(s => {
+  const un1 = kol('malzemeler_' + kgBolum).onSnapshot(s => {
     kgMalzemeler = s.docs.map(d => ({ id: d.id, ...d.data() }));
-    kgHesaplaVeCiz();
+    kgVeriGuncellendi();
   });
-  const un2 = db.collection('kullanim_' + kgBolum).onSnapshot(s => {
+  const un2 = kol('kullanim_' + kgBolum).onSnapshot(s => {
     kgKullanimlar = s.docs.map(d => ({ id: d.id, ...d.data() }));
-    kgHesaplaVeCiz();
+    kgVeriGuncellendi();
   });
-  const un3 = db.collection('adresler_' + kgBolum).onSnapshot(s => {
+  const un3 = kol('adresler_' + kgBolum).onSnapshot(s => {
     kgAdresler = s.docs.map(d => ({ id: d.id, ...d.data() }));
-    kgRenderAdresler();
+    kgRenderAdresTablo();
   });
-  const un4 = db.collection('stok_hareketleri').where('bolum', '==', bolumAd).onSnapshot(s => {
+  const un4 = kol('stok_hareketleri').where('bolum', '==', bolumAd).onSnapshot(s => {
     kgHareketler = s.docs.map(d => ({ id: d.id, ...d.data() }));
     kgRenderRapor();
   });
   window.aktifListeners.push(un1, un2, un3, un4);
-  
-  // Mevcut aktif sekmeyi bul ve yeniden render et
+
+  // İlk açılışta tüm sekmeleri (statik + dinamik kısımlarıyla) kur
   const aktifTab = document.querySelector('#kullanim-modulu .tab-btn.aktif');
-  if (aktifTab) {
-    kgTabGoster(aktifTab.dataset.kgtab);
-  } else {
-    kgTabGoster('giris'); // hiçbiri aktif değilse giris'i aç
-  }
+  kgTabGoster(aktifTab ? aktifTab.dataset.kgtab : 'giris');
 }
+
+// Bir Firestore güncellemesi geldiğinde SADECE tabloları tazele; formlara DOKUNMA.
+function kgVeriGuncellendi(){
+  kgRenderGirisTablo();
+  kgRenderMalzemeTablo();
+}
+
 function kgTabGoster(tab){
   document.querySelectorAll('#kullanim-modulu .tab-btn').forEach(b => b.classList.toggle('aktif', b.dataset.kgtab === tab));
   ['giris', 'malzeme', 'adres', 'rapor'].forEach(t => document.getElementById('kg-' + t).classList.toggle('gizli', t !== tab));
-  
-  // Arama değişkenlerini sıfırla
+
   kgMatQuery = '';
   kgAdrQuery = '';
-  // (Hareket filtresi zaten kgBolgeSec ile sıfırlanıyor, ama yine de ekleyelim)
   kgHareketBas = '';
   kgHareketSon = '';
 
-  // İlgili sekmeyi render et (böylece input değerleri de boş gelir)
-  if (tab === 'giris') kgRenderGiris();
-  if (tab === 'malzeme') kgRenderMalzemeTablo();
-  if (tab === 'adres') kgRenderAdresler();
+  // Her sekme açıldığında STATİK (form/başlık) + DİNAMİK (tablo) kısımlar birlikte kurulur
+  if (tab === 'giris') { kgRenderGirisIskelet(); kgRenderGirisForm(); kgRenderGirisTablo(); }
+  if (tab === 'malzeme') { kgRenderMalzemeIskelet(); kgRenderMalzemeUst(); kgRenderMalzemeTablo(); }
+  if (tab === 'adres') { kgRenderAdresIskelet(); kgRenderAdresUst(); kgRenderAdresTablo(); }
   if (tab === 'rapor') kgRenderRapor();
 }
 
@@ -103,20 +98,17 @@ function kgMalzemelerHesaplanmis(){
   });
 }
 
-function kgHesaplaVeCiz(){ kgRenderGiris(); kgRenderMalzemeTablo(); }
+// ===================== KULLANIM GİRİŞİ SEKMESİ (form + tablo ayrı) =====================
 
-function kgRenderGiris(){
-  const sorted = kgKullanimlar.slice().sort((a, b) => (b.tarihISO + b.saat).localeCompare(a.tarihISO + a.saat));
-  let rows = sorted.map(u => `<tr>
-    <td class="mono">${esc(u.tarih)} ${esc(u.saat)}</td>
-    <td><span class="clickable-text" onclick="kgMalzemeGecmis('${esc(u.malzeme).replace(/'/g, "\\'")}')">${esc(u.malzeme)}</span></td>
-    <td class="text-right">${u.miktar}</td>
-    <td><span class="clickable-text" onclick="kgAdresGecmis('${esc(u.adres).replace(/'/g, "\\'")}')">${esc(u.adres)}</span></td>
-    <td class="hide-mobile">${esc(u.aciklama || '')}</td>
-    <td class="text-right"><button class="icon-btn" onclick="kgKullanimDuzenle('${u.id}')"><i class="fa-solid fa-pen"></i></button> <button class="icon-btn" onclick="kgKullanimSil('${u.id}')"><i class="fa-solid fa-xmark"></i></button></td>
-  </tr>`).join('');
-  if (!rows) rows = '<tr><td colspan="6" class="muted">Henüz kullanım kaydı yok.</td></tr>';
-  document.getElementById('kg-giris').innerHTML = `
+function kgRenderGirisIskelet(){
+  document.getElementById('kg-giris').innerHTML = `<div id="kg-giris-form"></div><div id="kg-giris-tablo"></div>`;
+}
+
+// STATİK — sadece tab açıldığında / bölge değiştiğinde kurulur, veri güncellemesiyle YENİDEN YARATILMAZ
+function kgRenderGirisForm(){
+  const el = document.getElementById('kg-giris-form');
+  if (!el) return;
+  el.innerHTML = `
     <div class="card"><h3>Yeni Kullanım Kaydı (${kgBolumLabel(kgBolum)})</h3>
     <div class="grid3">
       <div><label class="f">Tarih</label><input id="kg-u-tarih" type="date" value="${isoBugun()}"></div>
@@ -126,8 +118,24 @@ function kgRenderGiris(){
       <div style="grid-column:1/-1"><label class="f">Açıklama</label><input id="kg-u-aciklama" placeholder="Açıklama"></div>
       <div><button class="btn btn-blue w-full" onclick="kgKullanimEkle()">+ Kaydet</button></div>
     </div></div>
-    <div class="card" style="overflow:auto"><table><thead><tr><th>Tarih/Saat</th><th>Malzeme</th><th class="text-right">Miktar</th><th>Nereye</th><th class="hide-mobile">Açıklama</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
   `;
+}
+
+// DİNAMİK — Firestore güncellemesi geldiğinde tazelenir, form BUNA DAHİL DEĞİL
+function kgRenderGirisTablo(){
+  const el = document.getElementById('kg-giris-tablo');
+  if (!el) return;
+  const sorted = kgKullanimlar.slice().sort((a, b) => trKarsilastir(b.tarihISO + b.saat, a.tarihISO + a.saat));
+  let rows = sorted.map(u => `<tr>
+    <td class="mono">${esc(u.tarih)} ${esc(u.saat)}</td>
+    <td><span class="clickable-text" onclick="kgMalzemeGecmis('${esc(u.malzeme).replace(/'/g, "\\'")}')">${esc(u.malzeme)}</span></td>
+    <td class="text-right">${u.miktar}</td>
+    <td><span class="clickable-text" onclick="kgAdresGecmis('${esc(u.adres).replace(/'/g, "\\'")}')">${esc(u.adres)}</span></td>
+    <td class="hide-mobile">${esc(u.aciklama || '')}</td>
+    <td class="text-right"><button class="icon-btn" onclick="kgKullanimDuzenle('${u.id}')"><i class="fa-solid fa-pen"></i></button> <button class="icon-btn" onclick="kgKullanimSil('${u.id}')"><i class="fa-solid fa-xmark"></i></button></td>
+  </tr>`).join('');
+  if (!rows) rows = '<tr><td colspan="6" class="muted">Henüz kullanım kaydı yok.</td></tr>';
+  el.innerHTML = `<div class="card" style="overflow:auto"><table><thead><tr><th>Tarih/Saat</th><th>Malzeme</th><th class="text-right">Miktar</th><th>Nereye</th><th class="hide-mobile">Açıklama</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 function kgMalzemeOneriGoster(){
@@ -139,10 +147,8 @@ function kgMalzemeOneriGoster(){
   }, document.getElementById('kg-u-malzeme'));
 }
 
-// ========== ADRES ÖNERİSİ (KULLANIM GİRİŞİ İÇİN BİRLEŞİK GÖRÜNÜM) ==========
 function kgAdresOneriGoster() {
     const val = trLower(document.getElementById('kg-u-adres').value.trim());
-    // Birleşik adres listesi oluştur
     const tumAdresler = kgAdresler.map(a => (a.mahalle || '') + ' ' + (a.adres || '')).filter(Boolean);
     const matches = val ? tumAdresler.filter(a => trLower(a).indexOf(val) > -1) : tumAdresler.slice(0, 8);
     renderSuggest(document.getElementById('kg-u-adres-list'), matches.slice(0, 8), v => {
@@ -164,11 +170,11 @@ async function kgKullanimEkle(){
   if (!malzeme || !miktar || !adres) return toast('Zorunlu alanları doldurun');
   if (!kgMalzemeler.some(m => trLower(m.ad) === trLower(malzeme)) || !kgAdresVarMi(adres)) return toast('Geçersiz malzeme/adres');
   const n = nowTarih();
-  await db.collection('kullanim_' + kgBolum).add({
+  await kol('kullanim_' + kgBolum).add({
     tarih: isoToDisplay(tarihIso), tarihISO: tarihIso, saat: n.saat,
     malzeme, miktar, adres, aciklama, kullanici: kullaniciAdi()
   });
-  await db.collection('stok_hareketleri').add({
+  await kol('stok_hareketleri').add({
     tarih: n.display, tarihISO: n.iso, saat: n.saat,
     bolum: kgBolumLabel(kgBolum), islem: 'KULLANIM', malzeme,
     miktarDegisim: -miktar, aciklama: 'Adres: ' + adres, kullanici: kullaniciAdi()
@@ -203,14 +209,11 @@ async function kgKullanimGuncelle(id) {
     const aciklama = formatText(document.getElementById('duz-aciklama').value);
     const tarihIso = document.getElementById('duz-tarih').value;
 
-    // Zorunlu alan kontrolü
     if (!malzeme || !miktar || !adres) return toast('Tüm zorunlu alanları doldurun.');
-
-    // Malzeme ve adres geçerlilik kontrolü
     if (!kgMalzemeler.some(m => trLower(m.ad) === trLower(malzeme))) return toast('Geçersiz malzeme.');
     if (!kgAdresVarMi(adres)) return toast('Geçersiz adres.');
 
-    await db.collection('kullanim_' + kgBolum).doc(id).update({
+    await kol('kullanim_' + kgBolum).doc(id).update({
         malzeme, miktar, adres, aciklama,
         tarih: isoToDisplay(tarihIso), tarihISO: tarihIso
     });
@@ -227,8 +230,7 @@ function kgDuzMalzemeOneri(){
   }, document.getElementById('duz-malzeme'));
 }
 
-// DÜZELTİLDİ: kgAdresler öğelerinde "ad" alanı YOK — "mahalle" + "adres" var.
-// Eski kod "a.ad" okuduğu için bu kutuda öneri listesi her zaman boş/undefined geliyordu.
+// DÜZELTİLDİ: kgAdresler öğelerinde "ad" alanı yok — "mahalle" + "adres" var.
 function kgDuzAdresOneri(){
   const val = trLower(document.getElementById('duz-adres').value.trim());
   const all = kgAdresler.map(a => ((a.mahalle || '') + ' ' + (a.adres || '')).trim()).filter(Boolean);
@@ -243,9 +245,9 @@ async function kgKullanimSil(id){
   const u = kgKullanimlar.find(x => x.id === id);
   if (!u) return;
   appConfirm('Kaydı silmek istediğinize emin misiniz?', async () => {
-    await db.collection('kullanim_' + kgBolum).doc(id).delete();
+    await kol('kullanim_' + kgBolum).doc(id).delete();
     const n = nowTarih();
-    await db.collection('stok_hareketleri').add({
+    await kol('stok_hareketleri').add({
       tarih: n.display, tarihISO: n.iso, saat: n.saat,
       bolum: kgBolumLabel(kgBolum), islem: 'KULLANIM SİLİNDİ', malzeme: u.malzeme,
       miktarDegisim: Number(u.miktar), aciklama: 'Stok geri eklendi', kullanici: kullaniciAdi()
@@ -256,23 +258,38 @@ async function kgKullanimSil(id){
 
 function kgMalzemeGecmis(malzemeAdi){
   const kayitlar = kgKullanimlar.filter(k => trLower(k.malzeme) === trLower(malzemeAdi))
-    .sort((a, b) => (b.tarihISO + b.saat).localeCompare(a.tarihISO + a.saat));
+    .sort((a, b) => trKarsilastir(b.tarihISO + b.saat, a.tarihISO + a.saat));
   let rows = kayitlar.map(k => `<tr><td>${esc(k.tarih)} ${esc(k.saat)}</td><td>${esc(k.adres)}</td><td class="text-right">${k.miktar}</td><td>${esc(k.aciklama || '')}</td></tr>`).join('');
   openModal(`${esc(malzemeAdi)} Kullanım Geçmişi`, `<table><thead><tr><th>Tarih/Saat</th><th>Adres</th><th class="text-right">Miktar</th><th>Açıklama</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="muted">Kayıt yok</td></tr>'}</tbody></table>`);
 }
 
 function kgAdresGecmis(adres){
   const kayitlar = kgKullanimlar.filter(k => k.adres === adres)
-    .sort((a, b) => (b.tarihISO + b.saat).localeCompare(a.tarihISO + a.saat));
+    .sort((a, b) => trKarsilastir(b.tarihISO + b.saat, a.tarihISO + a.saat));
   let rows = kayitlar.map(k => `<tr><td>${esc(k.tarih)} ${esc(k.saat)}</td><td>${esc(k.malzeme)}</td><td class="text-right">${k.miktar}</td><td>${esc(k.aciklama || '')}</td></tr>`).join('');
   openModal(`${esc(adres)} Adres Kullanımı`, `<table><thead><tr><th>Tarih/Saat</th><th>Malzeme</th><th class="text-right">Miktar</th><th>Açıklama</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="muted">Kayıt yok</td></tr>'}</tbody></table>`);
 }
 
-// Malzeme sekmesi
+// ===================== MALZEME SEKMESİ (üst kısım + tablo ayrı) =====================
+
+function kgRenderMalzemeIskelet(){
+  document.getElementById('kg-malzeme').innerHTML = `<div id="kg-malzeme-ust"></div><div id="kg-malzeme-tablo"></div>`;
+}
+
+// STATİK — arama kutusu dahil, veri güncellemesiyle yeniden yaratılmaz
+function kgRenderMalzemeUst(){
+  const el = document.getElementById('kg-malzeme-ust');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="card"><div class="flex justify-between items-center flex-wrap gap-2"><h3>Malzemeler</h3><div class="flex gap-2"><button class="btn btn-gray" onclick="kgExcelYukleModal()"><i class="fa-solid fa-file-excel"></i> Excel Yükle</button><button class="btn btn-blue" onclick="kgMalzemeEkleModal()">+ Malzeme Ekle</button></div></div>
+    <input id="kg-mat-ara" value="${esc(kgMatQuery)}" class="mt-3" placeholder="Kelime ile ara (kod, ad, açıklama)..." oninput="kgMatQuery=this.value;kgRenderMalzemeTablo();"></div>
+  `;
+}
+
+// DİNAMİK
 function kgRenderMalzemeTablo(){
-  if (document.getElementById('kg-mat-ara')) {
-        document.getElementById('kg-mat-ara').value = '';
-    }
+  const el = document.getElementById('kg-malzeme-tablo');
+  if (!el) return;
   const q = trLower(kgMatQuery);
   const list = kgMalzemelerHesaplanmis().filter(m => !q || trLower(m.kod + ' ' + m.ad + ' ' + (m.aciklama || '')).indexOf(q) > -1);
   let rows = list.map(m => `<tr>
@@ -282,11 +299,7 @@ function kgRenderMalzemeTablo(){
     <td class="text-right"><button class="icon-btn" onclick="kgMalzemeDuzenle('${m.id}')"><i class="fa-solid fa-pen"></i></button> <button class="icon-btn" onclick="kgMalzemeSil('${m.id}','${esc(m.ad).replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash text-red-400"></i></button></td>
   </tr>`).join('');
   if (!rows) rows = '<tr><td colspan="6" class="muted">Sonuç yok.</td></tr>';
-  document.getElementById('kg-malzeme').innerHTML = `
-    <div class="card"><div class="flex justify-between items-center flex-wrap gap-2"><h3>Malzemeler (${kgMalzemeler.length})</h3><div class="flex gap-2"><button class="btn btn-gray" onclick="kgExcelYukleModal()"><i class="fa-solid fa-file-excel"></i> Excel Yükle</button><button class="btn btn-blue" onclick="kgMalzemeEkleModal()">+ Malzeme Ekle</button></div></div>
-    <input id="kg-mat-ara" value="${esc(kgMatQuery)}" class="mt-3" placeholder="Ara..." oninput="kgMatQuery=this.value;kgRenderMalzemeTablo();"></div>
-    <div class="card" style="overflow:auto"><table><thead><tr><th>Kod</th><th>Ad</th><th class="text-right">Başlangıç</th><th class="text-right">Kalan</th><th>Durum</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
-  `;
+  el.innerHTML = `<div class="card"><h3 class="mb-1">Malzemeler (${list.length}/${kgMalzemeler.length})</h3></div><div class="card" style="overflow:auto"><table><thead><tr><th>Kod</th><th>Ad</th><th class="text-right">Başlangıç</th><th class="text-right">Kalan</th><th>Durum</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 function kgMalzemeDetay(id){
@@ -309,18 +322,18 @@ function kgMalzemeEkleModal(){
 
 async function kgMalzemeKaydet(){
   if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
-  const ad = formatText(document.getElementById('km-ad').value);   // veya em-ad
+  const ad = formatText(document.getElementById('km-ad').value);
   const bas = Number(document.getElementById('km-bas').value);
   if (!ad || isNaN(bas)) return toast('Ad ve başlangıç stok gerekli');
   if (kgMalzemeler.some(m => trLower(m.ad) === trLower(ad))) return toast('Bu malzeme zaten var');
-  await db.collection('malzemeler_' + kgBolum).add({
+  await kol('malzemeler_' + kgBolum).add({
     kod: document.getElementById('km-kod').value.trim(), ad,
     aciklama: document.getElementById('km-aciklama').value.trim(),
     birim: document.getElementById('km-birim').value.trim(),
     baslangic: bas
   });
   const n = nowTarih();
-  await db.collection('stok_hareketleri').add({
+  await kol('stok_hareketleri').add({
     tarih: n.display, tarihISO: n.iso, saat: n.saat,
     bolum: kgBolumLabel(kgBolum), islem: 'YENİ MALZEME', malzeme: ad,
     miktarDegisim: bas, aciklama: 'Başlangıç stok: ' + bas, kullanici: kullaniciAdi()
@@ -345,17 +358,17 @@ async function kgMalzemeGuncelle(id){
   if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
   const m = kgMalzemeler.find(x => x.id === id);
   const eskiBas = m ? Number(m.baslangic || 0) : 0;
-  const ad = formatText(document.getElementById('km-ad').value);   // veya em-ad
+  const ad = formatText(document.getElementById('em-ad').value);
   const bas = Number(document.getElementById('em-bas').value);
   if (!ad) return toast('Ad boş olamaz');
-  await db.collection('malzemeler_' + kgBolum).doc(id).set({
+  await kol('malzemeler_' + kgBolum).doc(id).set({
     kod: document.getElementById('em-kod').value.trim(), ad,
     aciklama: document.getElementById('em-aciklama').value.trim(),
     birim: document.getElementById('em-birim').value.trim(), baslangic: bas
   }, { merge: true });
   if (eskiBas !== bas) {
     const n = nowTarih();
-    await db.collection('stok_hareketleri').add({
+    await kol('stok_hareketleri').add({
       tarih: n.display, tarihISO: n.iso, saat: n.saat,
       bolum: kgBolumLabel(kgBolum), islem: 'STOK GÜNCELLE', malzeme: ad,
       miktarDegisim: bas - eskiBas, aciklama: 'Stok: ' + eskiBas + ' → ' + bas, kullanici: kullaniciAdi()
@@ -371,8 +384,8 @@ function kgMalzemeSil(id, ad){
   if (kullanimSayisi > 0) msg += '<br>Bu malzemeye ait ' + kullanimSayisi + ' kullanım kaydı da silinecek!';
   appConfirm(msg, async () => {
     const batch = db.batch();
-    kgKullanimlar.filter(u => trLower(u.malzeme) === trLower(ad)).forEach(u => batch.delete(db.collection('kullanim_' + kgBolum).doc(u.id)));
-    batch.delete(db.collection('malzemeler_' + kgBolum).doc(id));
+    kgKullanimlar.filter(u => trLower(u.malzeme) === trLower(ad)).forEach(u => batch.delete(kol('kullanim_' + kgBolum).doc(u.id)));
+    batch.delete(kol('malzemeler_' + kgBolum).doc(id));
     await batch.commit();
     toast('Malzeme silindi');
   });
@@ -396,7 +409,7 @@ function kgExcelYukle(){
     json.forEach(row => {
       const ad = String(row.Ad || row.ad || '').trim();
       if (!ad || mevcut.indexOf(trLower(ad)) > -1) return;
-      batch.set(db.collection('malzemeler_' + kgBolum).doc(), {
+      batch.set(kol('malzemeler_' + kgBolum).doc(), {
         ad, kod: String(row.Kod || row.kod || ''),
         birim: String(row.Birim || row.birim || 'Adet'),
         aciklama: String(row.Aciklama || row.aciklama || ''),
@@ -411,18 +424,27 @@ function kgExcelYukle(){
   reader.readAsArrayBuffer(f);
 }
 
-// ========== ADRES LİSTESİ (MAHALLE GRUPLU) ==========
-function kgRenderAdresler() {
-    // Arama kutusunu sıfırla
-    if (document.getElementById('kg-adr-ara')) {
-        document.getElementById('kg-adr-ara').value = '';
-    }
-        // kgAdresler boş veya tanımsız ise mesaj göster
-   if (!kgAdresler || kgAdresler.length === 0) {
-        document.getElementById('kg-adres').innerHTML = `
-            <div class="card"><div class="flex justify-between items-center"><h3>Adresler (0)</h3><div class="flex gap-2"><button class="btn btn-gray" onclick="kgAdresExcelYukleModal()"><i class="fa-solid fa-file-excel"></i> Excel Yükle</button><button class="btn btn-blue" onclick="kgAdresEkleModal()">+ Adres Ekle</button></div></div></div>
-            <div class="muted">Henüz adres yok.</div>
-        `;
+// ===================== ADRES SEKMESİ (üst kısım + tablo ayrı) =====================
+
+function kgRenderAdresIskelet(){
+  document.getElementById('kg-adres').innerHTML = `<div id="kg-adres-ust"></div><div id="kg-adres-tablo"></div>`;
+}
+
+function kgRenderAdresUst(){
+  const el = document.getElementById('kg-adres-ust');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="card"><div class="flex justify-between items-center"><h3>Adresler</h3><div class="flex gap-2"><button class="btn btn-gray" onclick="kgAdresExcelYukleModal()"><i class="fa-solid fa-file-excel"></i> Excel Yükle</button><button class="btn btn-blue" onclick="kgAdresEkleModal()">+ Adres Ekle</button></div></div>
+    <input id="kg-adr-ara" value="${esc(kgAdrQuery)}" class="mt-3" placeholder="Mahalle veya adres ara..." oninput="kgAdrQuery=this.value;kgRenderAdresTablo();"></div>
+  `;
+}
+
+function kgRenderAdresTablo() {
+    const el = document.getElementById('kg-adres-tablo');
+    if (!el) return;
+
+    if (!kgAdresler || kgAdresler.length === 0) {
+        el.innerHTML = '<div class="muted">Henüz adres yok.</div>';
         return;
     }
 
@@ -431,12 +453,9 @@ function kgRenderAdresler() {
         if (!q) return true;
         const tamAdres = (a.mahalle || '') + ' ' + (a.adres || '');
         return trLower(tamAdres).indexOf(q) > -1;
-    }).sort((a, b) => {
-        if (a.mahalle !== b.mahalle) return a.mahalle.localeCompare(b.mahalle, 'tr');
-        return a.adres.localeCompare(b.adres, 'tr');
-    });
+    // GÜVENLİ sıralama: mahalle/adres alanı eksik olsa bile ASLA hata fırlatmaz.
+    }).sort((a, b) => trKarsilastir(a.mahalle, b.mahalle) || trKarsilastir(a.adres, b.adres));
 
-    // Mahalle grupları
     const gruplar = {};
     filtrelenmis.forEach(a => {
         const m = a.mahalle || 'Diğer';
@@ -461,16 +480,9 @@ function kgRenderAdresler() {
         html += `</tbody></table></div>`;
     }
 
-    if (!html) html = '<div class="muted">Aramanızla eşleşen adres yok.</div>';
-
-    document.getElementById('kg-adres').innerHTML = `
-        <div class="card"><div class="flex justify-between items-center"><h3>Adresler (${kgAdresler.length})</h3><div class="flex gap-2"><button class="btn btn-gray" onclick="kgAdresExcelYukleModal()"><i class="fa-solid fa-file-excel"></i> Excel Yükle</button><button class="btn btn-blue" onclick="kgAdresEkleModal()">+ Adres Ekle</button></div></div>
-        <input id="kg-adr-ara" value="${esc(kgAdrQuery)}" class="mt-3" placeholder="Mahalle veya adres ara..." oninput="kgAdrQuery=this.value;kgRenderAdresler();"></div>
-        ${html}
-    `;
+    el.innerHTML = html || '<div class="muted">Aramanızla eşleşen adres yok.</div>';
 }
 
-// ========== ADRES EKLEME ==========
 function kgAdresEkleModal() {
     openModal('Adres Ekle', `
         <div class="grid3">
@@ -483,10 +495,10 @@ function kgAdresEkleModal() {
 
 async function kgAdresKaydet() {
     if (!kgBolum) { toast('Önce bölge seçin'); return; }
-    
+
     const mahalle = formatText(document.getElementById('ka-mahalle')?.value || '');
     const adresDetay = formatText(document.getElementById('ka-adres')?.value || '');
-    
+
     if (!mahalle || !adresDetay) {
         toast('Mahalle ve adres detayı zorunludur.');
         return;
@@ -501,22 +513,18 @@ async function kgAdresKaydet() {
     }
 
     try {
-        await db.collection('adresler_' + kgBolum).add({
+        await kol('adresler_' + kgBolum).add({
             mahalle: mahalle,
             adres: adresDetay,
             onay: null
         });
         closeModal();
-        // Hemen render et
-        kgRenderAdresler();
-        // 300ms sonra bir daha render et (dinleyici gecikmesine karşı)
-        setTimeout(() => kgRenderAdresler(), 300);
         toast('Adres eklendi');
     } catch (e) {
         appAlert('Kayıt başarısız: ' + e.message);
     }
 }
-// ========== ADRES DÜZENLEME ==========
+
 function kgAdresDuzenle(id) {
     const a = kgAdresler.find(x => x.id === id);
     if (!a) return;
@@ -536,6 +544,15 @@ function kgAdresDuzenle(id) {
     `);
 }
 
+function kgAdresOnaySec(deger) {
+    document.getElementById('ea-onay').value = String(deger);
+    document.querySelectorAll('#ea-onay-btns .btn').forEach(b => b.classList.remove('btn-green', 'btn-red'));
+    const btns = document.querySelectorAll('#ea-onay-btns .btn');
+    if (deger === true) btns[0].classList.add('btn-green');
+    else if (deger === false) btns[1].classList.add('btn-red');
+    btns.forEach(b => { if (!b.classList.contains('btn-green') && !b.classList.contains('btn-red')) b.classList.add('btn-gray'); });
+}
+
 async function kgAdresGuncelle(id) {
     if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
     const mahalle = document.getElementById('ea-mahalle').value.trim();
@@ -543,26 +560,19 @@ async function kgAdresGuncelle(id) {
     if (!mahalle || !adresDetay) return toast('Mahalle ve adres detayı boş olamaz.');
     const onayVal = document.getElementById('ea-onay').value;
     const onay = onayVal === 'true' ? true : onayVal === 'false' ? false : null;
-    await db.collection('adresler_' + kgBolum).doc(id).update({ mahalle, adres: adresDetay, onay });
+    await kol('adresler_' + kgBolum).doc(id).update({ mahalle, adres: adresDetay, onay });
     closeModal();
-    kgRenderAdresler();
-    setTimeout(() => kgRenderAdresler(), 300);
     toast('Güncellendi');
 }
 
 function kgAdresSil(id){
   if (!kgBolum) { toast('Lütfen önce bir bölge seçin.'); return; }
   appConfirm('Bu adresi silmek istediğinize emin misiniz?', async () => {
-    await db.collection('adresler_' + kgBolum).doc(id).delete();
+    await kol('adresler_' + kgBolum).doc(id).delete();
     toast('Adres silindi');
   });
 }
 
-function kgAdresExcelYukleModal(){
-  openModal('Excel\'den Toplu Adres Yükle', `<p class="text-xs text-gray-400 mb-2">Sadece "Adres" sütunu olmalı.</p><input type="file" id="ka-excel" accept=".xlsx,.xls"><button class="btn btn-blue w-full mt-3" onclick="kgAdresExcelYukle()">Yükle</button>`);
-}
-
-// ========== EXCEL YÜKLEME (İKİ SÜTUN) ==========
 function kgAdresExcelYukleModal() {
     openModal('Excel\'den Toplu Adres Yükle', `
         <p class="text-xs text-gray-400 mb-2">Sütunlar: <b>Mahalle</b>, <b>Adres Detayı</b> (başlık olmalı)</p>
@@ -582,14 +592,14 @@ async function kgAdresExcelYukle() {
         if (!json.length) return toast('Veri yok');
         const batch = db.batch();
         let eklenen = 0;
-        const mevcutSet = new Set(kgAdresler.map(a => trLower(a.mahalle + '|||' + a.adres)));
+        const mevcutSet = new Set(kgAdresler.map(a => trLower((a.mahalle || '') + '|||' + (a.adres || ''))));
         json.forEach(row => {
             const mahalle = String(row.Mahalle || row.mahalle || '').trim();
             const adresDetay = String(row['Adres Detayı'] || row['Adres'] || row.adres || '').trim();
             if (!mahalle || !adresDetay) return;
             const key = trLower(mahalle + '|||' + adresDetay);
             if (mevcutSet.has(key)) return;
-            batch.set(db.collection('adresler_' + kgBolum).doc(), { mahalle, adres: adresDetay, onay: null });
+            batch.set(kol('adresler_' + kgBolum).doc(), { mahalle, adres: adresDetay, onay: null });
             mevcutSet.add(key);
             eklenen++;
         });
@@ -601,7 +611,8 @@ async function kgAdresExcelYukle() {
     reader.readAsArrayBuffer(f);
 }
 
-// Rapor sekmesi
+// ===================== RAPOR SEKMESİ =====================
+
 function kgRenderRapor(){
   const hesap = kgMalzemelerHesaplanmis();
   const stokYok = hesap.filter(m => m.durum === 'STOK YOK').length;
@@ -610,7 +621,7 @@ function kgRenderRapor(){
   let filtreli = kgHareketler.slice();
   if (kgHareketBas) filtreli = filtreli.filter(h => h.tarihISO >= kgHareketBas);
   if (kgHareketSon) filtreli = filtreli.filter(h => h.tarihISO <= kgHareketSon);
-  filtreli.sort((a, b) => (b.tarihISO + b.saat).localeCompare(a.tarihISO + a.saat));
+  filtreli.sort((a, b) => trKarsilastir(b.tarihISO + b.saat, a.tarihISO + a.saat));
   let rows = filtreli.map(h => `<tr><td>${esc(h.tarih)} ${esc(h.saat)}</td><td>${esc(h.islem)}</td><td>${esc(h.malzeme)}</td><td class="text-right">${h.miktarDegisim > 0 ? '+' : ''}${h.miktarDegisim}</td><td>${esc(h.aciklama || '')}</td><td class="hide-mobile">${esc(h.kullanici || '')}</td></tr>`).join('');
   if (!rows) rows = '<tr><td colspan="6" class="muted">Hareket yok.</td></tr>';
   document.getElementById('kg-rapor').innerHTML = `
@@ -640,17 +651,22 @@ function kgFiltreliHareketler(){
   let f = kgHareketler.slice();
   if (kgHareketBas) f = f.filter(h => h.tarihISO >= kgHareketBas);
   if (kgHareketSon) f = f.filter(h => h.tarihISO <= kgHareketSon);
-  return f.sort((a, b) => (b.tarihISO + b.saat).localeCompare(a.tarihISO + a.saat));
+  return f.sort((a, b) => trKarsilastir(b.tarihISO + b.saat, a.tarihISO + a.saat));
 }
 
-function kgPdfDisaAktar(){
+// Türkçe karakter destekli PDF
+async function kgPdfDisaAktar(){
+  toast('PDF hazırlanıyor...');
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
+  try { await turkcePdfFontHazirla(doc); } catch (e) { console.error(e); }
   doc.text(kgBolumLabel(kgBolum) + ' - Stok Hareketleri', 14, 15);
   const list = kgFiltreliHareketler();
   doc.autoTable({
     startY: 20,
-    head: [['Tarih', 'Saat', 'Islem', 'Malzeme', 'Degisim', 'Acıklama']],
+    styles: { font: 'NotoSans', fontStyle: 'normal' },
+    headStyles: { font: 'NotoSans', fontStyle: 'normal' },
+    head: [['Tarih', 'Saat', 'İşlem', 'Malzeme', 'Değişim', 'Açıklama']],
     body: list.map(h => [h.tarih, h.saat, h.islem, h.malzeme, h.miktarDegisim, h.aciklama || ''])
   });
   doc.save('stok_hareketleri_' + kgBolum + '.pdf');
