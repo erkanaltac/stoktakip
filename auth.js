@@ -35,7 +35,7 @@ function sifremiUnuttum() {
         alert('Lütfen önce kullanıcı adınızı yazın.');
         return;
     }
-    // Talebi Firestore'a kaydet
+    
     const n = nowTarih();
     db.collection('sifreTalepleri').add({
         kullanici: kullaniciAdi,
@@ -44,9 +44,10 @@ function sifremiUnuttum() {
         saat: n.saat,
         durum: 'bekliyor'
     }).then(() => {
-        alert('Şifre sıfırlama talebiniz yöneticiye (Erkan) iletildi. Ayarlar > Şifre Talepleri bölümünden takip edebilirsiniz.');
-    }).catch(() => {
-        alert('Talep iletilemedi. Lütfen Erkan ile iletişime geçin.');
+        alert('Şifre sıfırlama talebiniz yöneticiye iletildi.');
+    }).catch((err) => {
+        console.error('Talep hatası:', err);
+        alert('Talep iletilemedi. Hata: ' + err.message);
     });
 }
 
