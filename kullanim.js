@@ -80,12 +80,6 @@ function kgDinleyicileriKur(){
   const aktifTab = document.querySelector('#kullanim-modulu .tab-btn.aktif');
   kgTabGoster(aktifTab ? aktifTab.dataset.kgtab : 'giris');
 }
-
-  // İlk açılışta tüm sekmeleri (statik + dinamik kısımlarıyla) kur
-  const aktifTab = document.querySelector('#kullanim-modulu .tab-btn.aktif');
-  kgTabGoster(aktifTab ? aktifTab.dataset.kgtab : 'giris');
-}
-
 // Bir Firestore güncellemesi geldiğinde SADECE tabloları tazele; formlara DOKUNMA.
 function kgVeriGuncellendi(){
   kgRenderGirisTablo();
