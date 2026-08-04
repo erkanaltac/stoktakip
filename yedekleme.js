@@ -1,17 +1,5 @@
 // yedekleme.js
-// Kullanıcı Bazlı Yedekleme ve Geri Yükleme Sistemi
-// ---------------------------------------------------
-// - "Yedek Al": tüm koleksiyonları okuyup Firestore'da "yedekler" koleksiyonuna
-//   TEK bir belge olarak yazar. Böylece veritabanı içinde (Firebase konsolunda
-//   "yedekler" koleksiyonuna bakarak) her zaman kolayca bulunabilir.
-// - "İndir": aynı yedeği düz bir .json dosyası olarak cihaza indirir.
-//   .json bir metin dosyasıdır; herhangi bir bilgisayarda Not Defteri,
-//   tarayıcı veya bir metin düzenleyici ile açılabilir -> "her PC'de açılabilir format".
-// - "Dosyadan Geri Yükle": daha önce indirilmiş .json dosyasını okuyup
-//   veritabanına geri yazar (örn. yeni bir bilgisayardan / yeni bir Firebase
-//   projesinden geri yükleme yapılabilir).
-// - Liste, sadece o anda giriş yapmış kullanıcının aldığı yedekleri gösterir
-//   ("kullanıcı bazlı").
+// Kullanıcı Bazlı Yedekleme ve Geri Yükleme Sistemi (Excel İndirme Özellikli)
 
 const YEDEK_KOLEKSIYONLAR = [
     'kullanim_alt', 'kullanim_ust',
@@ -26,7 +14,7 @@ let yedekListesi = [];
 
 // ---- Ayarlar ekranı açıldığında çağrılır ----
 function yedeklemeBaslat() {
-    if (!document.getElementById('yedek-liste')) return; // HTML'e kart eklenmemişse sessizce çık
+    if (!document.getElementById('yedek-liste')) return;
     document.getElementById('yedek-liste').innerHTML = '<div class="muted">Yükleniyor...</div>';
     const un = db.collection('yedekler')
         .where('kullaniciEmail', '==', window.aktifKullanici.email)
@@ -57,7 +45,8 @@ function yedeklemeListesiCiz() {
                     <div class="text-xs text-gray-400">${y.kayitSayisi || 0} kayıt · ${esc(y.kullanici || '')}</div>
                 </div>
                 <div class="flex gap-2">
-                    <button class="btn btn-gray" onclick="yedekIndir('${y.id}')"><i class="fa-solid fa-download"></i> İndir</button>
+                    <button class="btn btn-green" onclick="yedekExcelIndir('${y.id}')"><i class="fa-solid fa-file-excel"></i> Excel</button>
+                    <button class="btn btn-gray" onclick="yedekIndir('${y.id}')"><i class="fa-solid fa-download"></i> JSON</button>
                     <button class="btn btn-blue" onclick="yedekGeriYukleOnay('${y.id}')"><i class="fa-solid fa-rotate-left"></i> Geri Yükle</button>
                     <button class="icon-btn" onclick="yedekSil('${y.id}')"><i class="fa-solid fa-trash text-red-400"></i></button>
                 </div>
@@ -77,7 +66,11 @@ function yedekAl() {
                 let toplam = 0;
                 for (const col of YEDEK_KOLEKSIYONLAR) {
                     const snap = await db.collection(col).get();
-                    veri[col] = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+                    veri[col] = snap.docs.map(d => {
+                        const data = d.data();
+                        data._id = d.id;
+                        return data;
+                    });
                     toplam += veri[col].length;
                 }
                 const n = nowTarih();
@@ -95,6 +88,121 @@ function yedekAl() {
         },
         'Yedek Al'
     );
+}
+
+// ---- EXCEL olarak indir (HER KOLEKSİYON AYRI SAYFA) ----
+function yedekExcelIndir(id) {
+    const y = yedekListesi.find(x => x.id === id);
+    if (!y || !y.veri) return toast('Yedek verisi bulunamadı');
+
+    try {
+        const wb = XLSX.utils.book_new();
+
+        for (const col of YEDEK_KOLEKSIYONLAR) {
+            const kayitlar = y.veri[col] || [];
+            if (kayitlar.length === 0) continue;
+
+            // Sütun başlıklarını oluştur (_id dahil tüm alanlar)
+            const tumAlanlar = new Set();
+            kayitlar.forEach(k => Object.keys(k).forEach(a => tumAlanlar.add(a)));
+            const basliklar = ['_id', ...Array.from(tumAlanlar).filter(a => a !== '_id')];
+
+            const satirlar = kayitlar.map(k => basliklar.map(b => {
+                const val = k[b];
+                if (val === null || val === undefined) return '';
+                if (typeof val === 'object') return JSON.stringify(val);
+                return val;
+            }));
+
+            // Başlık satırını ekle
+            satirlar.unshift(basliklar);
+
+            const ws = XLSX.utils.aoa_to_sheet(satirlar);
+            // Sayfa adı en fazla 31 karakter olabilir
+            const sheetName = col.length > 31 ? col.substring(0, 28) + '...' : col;
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        }
+
+        const dosyaAdi = 'stok_yedek_' + y.tarihISO + '_' + y.saat.replace(':', '') + '.xlsx';
+        XLSX.writeFile(wb, dosyaAdi);
+        toast('Excel yedek dosyası indirildi');
+    } catch (e) {
+        appAlert('Excel oluşturma hatası: ' + e.message);
+    }
+}
+
+// ---- Excel dosyasından geri yükleme ----
+function yedekExceldenYukleModal() {
+    openModal('Excel\'den Geri Yükle', `
+        <p class="text-xs text-gray-400 mb-2">Daha önce "Excel İndir" ile kaydettiğiniz .xlsx yedek dosyasını seçin.</p>
+        <input type="file" id="yedek-excel-dosya" accept=".xlsx,.xls">
+        <button class="btn btn-red w-full mt-3" onclick="yedekExceldenGeriYukle()">Bu Excel Dosyasından Geri Yükle</button>
+    `);
+}
+
+function yedekExceldenGeriYukle() {
+    const f = document.getElementById('yedek-excel-dosya').files[0];
+    if (!f) return toast('Dosya seçin');
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        let wb;
+        try {
+            wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        } catch (err) {
+            return appAlert('Dosya okunamadı. Geçerli bir Excel (.xlsx) dosyası değil.');
+        }
+
+        const veri = {};
+        let toplamKayit = 0;
+
+        for (const sheetName of wb.SheetNames) {
+            if (!YEDEK_KOLEKSIYONLAR.includes(sheetName) && !YEDEK_KOLEKSIYONLAR.some(c => sheetName.startsWith(c.substring(0, 28)))) {
+                continue; // Tanınmayan sayfayı atla
+            }
+
+            // Gerçek koleksiyon adını bul
+            let gercekKoleksiyon = sheetName;
+            if (sheetName.endsWith('...')) {
+                gercekKoleksiyon = YEDEK_KOLEKSIYONLAR.find(c => c.startsWith(sheetName.substring(0, 28)));
+                if (!gercekKoleksiyon) continue;
+            }
+
+            const ws = wb.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+            if (!json.length) continue;
+
+            const basliklar = json[0];
+            const kayitlar = [];
+
+            for (let i = 1; i < json.length; i++) {
+                const row = json[i];
+                const kayit = {};
+                basliklar.forEach((h, idx) => {
+                    if (row[idx] !== undefined && row[idx] !== '') {
+                        kayit[h] = row[idx];
+                    }
+                });
+                if (Object.keys(kayit).length > 0) {
+                    kayitlar.push(kayit);
+                }
+            }
+
+            if (kayitlar.length > 0) {
+                veri[gercekKoleksiyon] = kayitlar;
+                toplamKayit += kayitlar.length;
+            }
+        }
+
+        if (toplamKayit === 0) return appAlert('Excel dosyasında geri yüklenecek veri bulunamadı.');
+        closeModal();
+        appConfirm(
+            'Excel dosyasından ' + toplamKayit + ' kayıt geri yüklenecek. ' +
+            '<b>Mevcut tüm veriler bu yedekle değiştirilecek ve bu işlem geri alınamaz!</b> Devam edilsin mi?',
+            function () { yedekVeriyiGeriYukle(veri); },
+            'Excel\'den Geri Yükle'
+        );
+    };
+    reader.readAsArrayBuffer(f);
 }
 
 // ---- Yedeği .json dosyası olarak cihaza indir ----
@@ -121,13 +229,13 @@ function yedekIndir(id) {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    toast('Yedek dosyası indirildi');
+    toast('JSON yedek dosyası indirildi');
 }
 
 // ---- Bilgisayardan .json yedek dosyası seçip geri yükleme ----
 function yedekDosyadanYukleModal() {
-    openModal('Dosyadan Geri Yükle', `
-        <p class="text-xs text-gray-400 mb-2">Daha önce "İndir" ile kaydettiğiniz .json yedek dosyasını seçin.</p>
+    openModal('Dosyadan Geri Yükle (JSON)', `
+        <p class="text-xs text-gray-400 mb-2">Daha önce "JSON İndir" ile kaydettiğiniz .json yedek dosyasını seçin.</p>
         <input type="file" id="yedek-dosya" accept=".json,application/json">
         <button class="btn btn-red w-full mt-3" onclick="yedekDosyadanGeriYukle()">Bu Dosyadan Geri Yükle</button>
     `);
@@ -171,9 +279,6 @@ function yedekGeriYukleOnay(id) {
 }
 
 // ---- Ortak geri yükleme motoru ----
-// Her koleksiyon için: önce mevcut tüm belgeleri siler, sonra yedekteki
-// belgeleri (aynı belge ID'leri ile) geri yazar. Firestore'un 500 işlem/batch
-// sınırına uymak için işlemler 400'lük parçalara bölünür.
 async function yedekVeriyiGeriYukle(veri) {
     toast('Geri yükleniyor, lütfen bekleyin... (sayfayı kapatmayın)');
     try {
