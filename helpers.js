@@ -246,3 +246,12 @@ document.addEventListener('click', function (e) {
     currentSuggest = null;
   }
 });
+// Firestore koleksiyon kısayolu (db.collection yerine kol)
+function kol(ad) {
+    return db.collection(ad);
+}
+
+// Türkçe karakter uyumlu sıralama
+function trKarsilastir(a, b) {
+    return String(a || '').localeCompare(String(b || ''), 'tr');
+}
