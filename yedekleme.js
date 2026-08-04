@@ -257,19 +257,21 @@ async function yedekVeriyiGeriYukle(veri) {
     toast('Geri yükleniyor...');
     try {
         for (const col of YEDEK_KOLEKSIYONLAR) {
-            const mevcut = await db.collection(col).get();
+            // 1) Mevcut koleksiyonu temizle
+            const mevcut = await kol(col).get();
             const silBatch = db.batch();
             mevcut.docs.forEach(d => silBatch.delete(d.ref));
             await silBatch.commit();
 
+            // 2) Yedekteki kayıtları yaz
             const kayitlar = veri[col] || [];
             for (let i = 0; i < kayitlar.length; i += 400) {
                 const batch = db.batch();
                 kayitlar.slice(i, i + 400).forEach(k => {
-                    const ref = k._id ? db.collection(col).doc(k._id) : db.collection(col).doc();
-                    const veriKopya = { ...k };
-                    delete veriKopya._id;
-                    batch.set(ref, veriKopya);
+                    const ref = k._id ? kol(col).doc(k._id) : kol(col).doc();
+                    const kopya = { ...k };
+                    delete kopya._id;
+                    batch.set(ref, kopya);
                 });
                 await batch.commit();
             }
