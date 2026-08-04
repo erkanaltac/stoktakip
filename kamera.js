@@ -106,6 +106,7 @@ async function kameraExcelYukle() {
                 nvrIp: String(row[4] || ''),
                 simkart: String(row[5] || ''),
                 aciklama: String(row[6] || '')
+                kullanici: kullaniciAdi()
             });
             mevcutAdresler.add(trLower(adres));
             eklenen++;
