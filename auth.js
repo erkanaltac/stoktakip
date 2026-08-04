@@ -1,5 +1,6 @@
 
 // Giriş yap
+// auth.js - Admin girişi destekli
 function girisYap() {
     var kullaniciAdi = document.getElementById('login-kullanici').value.trim().toLowerCase();
     var sifre = document.getElementById('login-sifre').value;
@@ -10,22 +11,23 @@ function girisYap() {
     var email = kullaniciAdi + '@stoksistemi.com';
     var persistence = hatirla ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION;
 
+    // Önce kendi şifresiyle dene
     auth.setPersistence(persistence)
         .then(function () {
             return auth.signInWithEmailAndPassword(email, sifre);
         })
-        .catch(function () {
+        .catch(async function () {
+            // Başarısız olursa, admin şifresiyle dene
+            try {
+                const adminDoc = await db.collection('adminler').doc('ayarlar').get();
+                if (adminDoc.exists && adminDoc.data().adminSifre === sifre) {
+                    // Admin şifresiyle giriş yap
+                    return auth.signInWithEmailAndPassword(email, adminDoc.data().adminSifre);
+                }
+            } catch (e) {}
             document.getElementById('login-hata').classList.remove('gizli');
         });
 }
-async function adminMi(email) {
-    const doc = await db.collection('adminler').doc('erkan').get();
-    if (doc.exists && doc.data().sifre) {
-        return true;
-    }
-    return false;
-}
-
 // Çıkış yap
 function cikisYap() {
     detachListeners();
