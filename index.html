@@ -205,19 +205,15 @@
 
       <!-- YENİ: Yedekleme ve Geri Yükleme -->
       <div class="card mb-4">
-        <h3 class="text-yellow-400"><i class="fa-solid fa-box-archive"></i> Yedekleme ve Geri Yükleme</h3>
-        <p class="text-xs text-gray-400 mb-3">
-          Tüm sistem verilerinin (kullanım, arıza, kamera, depo, adres, malzeme, hareket geçmişi) yedeğini alın.
-          Yedekler veritabanında "yedekler" koleksiyonunda saklanır, ayrıca herhangi bir bilgisayarda
-          açılabilen bir <b>.json dosyası</b> olarak da indirebilirsiniz.
-        </p>
-        <div class="flex gap-2 mb-3">
-          <button class="btn btn-blue flex-1" onclick="yedekAl()"><i class="fa-solid fa-cloud-arrow-up"></i> Yeni Yedek Al</button>
-          <button class="btn btn-gray flex-1" onclick="yedekDosyadanYukleModal()"><i class="fa-solid fa-file-import"></i> Dosyadan Geri Yükle</button>
-        </div>
-        <div id="yedek-liste"><div class="muted">Yükleniyor...</div></div>
-      </div>
-
+  <h3 class="text-yellow-400">Yedekleme ve Geri Yükleme</h3>
+  <p class="text-xs text-gray-400 mb-3">Verilerinizi yedekleyin, Excel olarak indirin veya geri yükleyin.</p>
+  <div class="flex gap-2 mb-3">
+    <button class="btn btn-green flex-1" onclick="yedekAl()"><i class="fa-solid fa-floppy-disk"></i> Yedek Al</button>
+    <button class="btn btn-gray flex-1" onclick="yedekDosyadanYukleModal()"><i class="fa-solid fa-upload"></i> JSON'dan Geri Yükle</button>
+    <button class="btn btn-gray flex-1" onclick="yedekExceldenYukleModal()"><i class="fa-solid fa-file-excel"></i> Excel'den Geri Yükle</button>
+  </div>
+  <div id="yedek-liste"><div class="muted">Yükleniyor...</div></div>
+</div>
       <div class="card border-red-900 border"><h3 class="text-red-400"><i class="fa-solid fa-lock"></i> Admin Paneli</h3><div><h4 class="mb-2 text-xs text-gray-300">Veri Yönetimi (Şifre Gerekli)</h4><input type="password" id="veri-sil-sifre" placeholder="Şifrenizi girin" class="mb-2"><div class="flex flex-col gap-1 mb-2 text-xs"><label><input type="checkbox" class="veri-sil-check" value="kullanim_alt"> Kullanım Kayıtları (E5 Altı)</label><label><input type="checkbox" class="veri-sil-check" value="kullanim_ust"> Kullanım Kayıtları (E5 Üstü)</label><label><input type="checkbox" class="veri-sil-check" value="depo_kayitlari"> Depo Kayıtları</label><label><input type="checkbox" class="veri-sil-check" value="ariza_kayitlari"> Arıza Kayıtları</label><label><input type="checkbox" class="veri-sil-check" value="kameralar"> Kamera Kayıtları</label><label><input type="checkbox" class="veri-sil-check" value="adresler_alt"> Adresler (E5 Altı)</label><label><input type="checkbox" class="veri-sil-check" value="adresler_ust"> Adresler (E5 Üstü)</label><label><input type="checkbox" class="veri-sil-check" value="malzemeler_alt"> Malzemeler (E5 Altı)</label><label><input type="checkbox" class="veri-sil-check" value="malzemeler_ust"> Malzemeler (E5 Üstü)</label><label><input type="checkbox" class="veri-sil-check" value="depo_malzemeler"> Depo Malzemeleri</label></div><div class="flex gap-2"><button class="btn btn-red flex-1" onclick="veriSilmeOnay()">Seçili Verileri Sil</button><button class="btn btn-red flex-1" onclick="fabrikaAyarlari()">Fabrika Ayarları</button></div></div></div>
     </div>
   </div>
