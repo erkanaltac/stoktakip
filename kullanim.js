@@ -44,24 +44,42 @@ function kgDinleyicileriKur(){
   kgKullanimlar = [];
   kgHareketler = [];
 
+  const mevcutKullanici = kullaniciAdi();
   const bolumAd = kgBolumLabel(kgBolum);
-  const un1 = kol('malzemeler_' + kgBolum).onSnapshot(s => {
-    kgMalzemeler = s.docs.map(d => ({ id: d.id, ...d.data() }));
-    kgVeriGuncellendi();
-  });
-  const un2 = kol('kullanim_' + kgBolum).onSnapshot(s => {
-    kgKullanimlar = s.docs.map(d => ({ id: d.id, ...d.data() }));
-    kgVeriGuncellendi();
-  });
-  const un3 = kol('adresler_' + kgBolum).onSnapshot(s => {
-    kgAdresler = s.docs.map(d => ({ id: d.id, ...d.data() }));
-    kgRenderAdresTablo();
-  });
-  const un4 = kol('stok_hareketleri').where('bolum', '==', bolumAd).onSnapshot(s => {
-    kgHareketler = s.docs.map(d => ({ id: d.id, ...d.data() }));
-    kgRenderRapor();
-  });
+
+  const un1 = kol('malzemeler_' + kgBolum)
+    .where('kullanici', '==', mevcutKullanici)
+    .onSnapshot(s => {
+      kgMalzemeler = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      kgVeriGuncellendi();
+    });
+
+  const un2 = kol('kullanim_' + kgBolum)
+    .where('kullanici', '==', mevcutKullanici)
+    .onSnapshot(s => {
+      kgKullanimlar = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      kgVeriGuncellendi();
+    });
+
+  const un3 = kol('adresler_' + kgBolum)
+    .where('kullanici', '==', mevcutKullanici)
+    .onSnapshot(s => {
+      kgAdresler = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      kgRenderAdresTablo();
+    });
+
+  const un4 = kol('stok_hareketleri')
+    .where('bolum', '==', bolumAd)
+    .where('kullanici', '==', mevcutKullanici)
+    .onSnapshot(s => {
+      kgHareketler = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      kgRenderRapor();
+    });
+
   window.aktifListeners.push(un1, un2, un3, un4);
+  const aktifTab = document.querySelector('#kullanim-modulu .tab-btn.aktif');
+  kgTabGoster(aktifTab ? aktifTab.dataset.kgtab : 'giris');
+}
 
   // İlk açılışta tüm sekmeleri (statik + dinamik kısımlarıyla) kur
   const aktifTab = document.querySelector('#kullanim-modulu .tab-btn.aktif');
