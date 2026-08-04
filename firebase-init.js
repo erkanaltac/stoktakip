@@ -6,3 +6,11 @@ if (!firebaseConfig || !firebaseConfig.apiKey) {
 firebase.initializeApp(firebaseConfig);
 window.auth = firebase.auth();
 window.db = firebase.firestore();
+function kol(ad) {
+    if (!window.aktifKullanici) {
+        console.error('kol(): Kullanıcı girişi yapılmadan koleksiyona erişilmeye çalışıldı: ' + ad);
+        throw new Error('Kullanıcı girişi yapılmamış');
+    }
+    return db.collection('kullanicilar').doc(window.aktifKullanici.uid).collection(ad);
+}
+window.kol = kol;
