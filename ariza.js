@@ -5,13 +5,32 @@ let arMalzemelerAlt = [], arMalzemelerUst = [], arAdreslerAlt = [], arAdreslerUs
 
 function arizaBaslat(){
   document.getElementById('ariza-form-area').innerHTML = '<div class="muted">Yükleniyor...</div>';
-  const un1 = kol('malzemeler_alt').onSnapshot(s => { arMalzemelerAlt = s.docs.map(d => d.data().ad); if(arBolum==='alt') arizaFormCiz(); });
-  const un2 = kol('malzemeler_ust').onSnapshot(s => { arMalzemelerUst = s.docs.map(d => d.data().ad); if(arBolum==='ust') arizaFormCiz(); });
-  const un3 = kol('adresler_alt').onSnapshot(s => { arAdreslerAlt = s.docs.map(d => (d.data().mahalle || '') + ' ' + (d.data().adres || '')); });
-  const un4 = kol('adresler_ust').onSnapshot(s => { arAdreslerUst = s.docs.map(d => (d.data().mahalle || '') + ' ' + (d.data().adres || '')); });
-  const un5 = kol('ariza_kayitlari').onSnapshot(s => { arKayitlar = s.docs.map(d => ({id:d.id,...d.data()})); arizaListeleriCiz(); });
-  window.aktifListeners.push(un1,un2,un3,un4,un5);
-  arChips=[]; arizaFormCiz(); document.getElementById('ariza-ara').value=''; document.getElementById('ariza-ara-sonuc').innerHTML='';
+  const mevcutKullanici = kullaniciAdi();
+
+  const un1 = kol('malzemeler_alt').where('kullanici', '==', mevcutKullanici).onSnapshot(s => {
+    arMalzemelerAlt = s.docs.map(d => d.data().ad);
+    if(arBolum==='alt') arizaFormCiz();
+  });
+  const un2 = kol('malzemeler_ust').where('kullanici', '==', mevcutKullanici).onSnapshot(s => {
+    arMalzemelerUst = s.docs.map(d => d.data().ad);
+    if(arBolum==='ust') arizaFormCiz();
+  });
+  const un3 = kol('adresler_alt').where('kullanici', '==', mevcutKullanici).onSnapshot(s => {
+    arAdreslerAlt = s.docs.map(d => (d.data().mahalle || '') + ' ' + (d.data().adres || ''));
+  });
+  const un4 = kol('adresler_ust').where('kullanici', '==', mevcutKullanici).onSnapshot(s => {
+    arAdreslerUst = s.docs.map(d => (d.data().mahalle || '') + ' ' + (d.data().adres || ''));
+  });
+  const un5 = kol('ariza_kayitlari').where('kullanici', '==', mevcutKullanici).onSnapshot(s => {
+    arKayitlar = s.docs.map(d => ({id:d.id,...d.data()}));
+    arizaListeleriCiz();
+  });
+
+  window.aktifListeners.push(un1, un2, un3, un4, un5);
+  arChips = [];
+  arizaFormCiz();
+  document.getElementById('ariza-ara').value = '';
+  document.getElementById('ariza-ara-sonuc').innerHTML = '';
 }
 
 function arizaFormCiz(){
