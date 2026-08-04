@@ -256,14 +256,13 @@ function yedekGeriYukleOnay(id) {
 async function yedekVeriyiGeriYukle(veri) {
     toast('Geri yükleniyor...');
     try {
+        const mevcutKullanici = kullaniciAdi();
         for (const col of YEDEK_KOLEKSIYONLAR) {
-            // 1) Mevcut koleksiyonu temizle
             const mevcut = await kol(col).get();
             const silBatch = db.batch();
             mevcut.docs.forEach(d => silBatch.delete(d.ref));
             await silBatch.commit();
 
-            // 2) Yedekteki kayıtları yaz
             const kayitlar = veri[col] || [];
             for (let i = 0; i < kayitlar.length; i += 400) {
                 const batch = db.batch();
@@ -271,6 +270,10 @@ async function yedekVeriyiGeriYukle(veri) {
                     const ref = k._id ? kol(col).doc(k._id) : kol(col).doc();
                     const kopya = { ...k };
                     delete kopya._id;
+                    // Kullanici alanı yoksa veya boşsa, oturum açan kullanıcıyı ekle
+                    if (!kopya.kullanici || kopya.kullanici.trim() === '') {
+                        kopya.kullanici = mevcutKullanici;
+                    }
                     batch.set(ref, kopya);
                 });
                 await batch.commit();
