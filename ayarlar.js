@@ -69,8 +69,8 @@ function sifreTalepleriniBaslat() {
     if (!document.getElementById('sifre-talepleri')) return;
     
     const un = db.collection('sifreTalepleri')
-        .orderBy('tarihISO', 'desc')
-        .orderBy('saat', 'desc')
+        //.orderBy('tarihISO', 'desc')
+        //.orderBy('saat', 'desc')
         .onSnapshot(s => {
             const talepler = s.docs.map(d => ({ id: d.id, ...d.data() }));
             let html = '';
