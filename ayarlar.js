@@ -84,4 +84,4 @@ function sifreTalepleriniBaslat() {
     });
     window.aktifListeners.push(un);
 }
-}
+
