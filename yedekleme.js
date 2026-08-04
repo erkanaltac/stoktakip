@@ -183,7 +183,7 @@ function koleksiyonBasliklari(col) {
     return sablonlar[col] || ['_id', 'veri']; // Bilinmeyen koleksiyon için varsayılan
 }
 
-// ==================== JSON İNDİRME (DÜZELTİLDİ) ====================
+// ==================== JSON İNDİRME ====================
 function yedekJsonIndir(id) {
     const y = yedekListesi.find(x => x.id === id);
     if (!y || !y.veri) return toast('Yedek verisi bulunamadı');
@@ -287,4 +287,79 @@ function yedekSil(id) {
         await db.collection('yedekler').doc(id).delete();
         toast('Yedek silindi');
     });
+}
+// Excel'den geri yükleme modalı
+function yedekExceldenYukleModal() {
+    openModal('Excel\'den Geri Yükle', `
+        <p class="text-xs text-gray-400 mb-2">Daha önce "Excel İndir" ile kaydettiğiniz .xlsx yedek dosyasını seçin.</p>
+        <p class="text-xs text-red-400 mb-2"><b>Uyarı:</b> Mevcut tüm veriler silinip yedekteki veriler yazılacak!</p>
+        <input type="file" id="yedek-excel-dosya" accept=".xlsx,.xls">
+        <button class="btn btn-red w-full mt-3" onclick="yedekExceldenGeriYukle()">Bu Excel Dosyasından Geri Yükle</button>
+    `);
+}
+
+// Excel dosyasından geri yükleme
+function yedekExceldenGeriYukle() {
+    const f = document.getElementById('yedek-excel-dosya').files[0];
+    if (!f) return toast('Dosya seçin');
+    
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        let wb;
+        try {
+            wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        } catch (err) {
+            return appAlert('Dosya okunamadı. Geçerli bir Excel (.xlsx) dosyası değil.');
+        }
+
+        const veri = {};
+        let toplamKayit = 0;
+
+        for (const sheetName of wb.SheetNames) {
+            // Koleksiyon adını bul
+            let gercekKoleksiyon = sheetName;
+            if (sheetName.endsWith('...')) {
+                gercekKoleksiyon = YEDEK_KOLEKSIYONLAR.find(c => c.startsWith(sheetName.substring(0, 28)));
+            }
+            if (!YEDEK_KOLEKSIYONLAR.includes(gercekKoleksiyon)) continue;
+
+            const ws = wb.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+            if (!json.length || json.length < 2) continue;
+
+            const basliklar = json[0];
+            const kayitlar = [];
+
+            for (let i = 1; i < json.length; i++) {
+                const row = json[i];
+                if (!row || row.every(cell => cell === undefined || cell === '')) continue;
+                
+                const kayit = {};
+                basliklar.forEach((h, idx) => {
+                    if (row[idx] !== undefined && row[idx] !== '') {
+                        kayit[h] = row[idx];
+                    }
+                });
+                if (Object.keys(kayit).length > 0) {
+                    kayitlar.push(kayit);
+                }
+            }
+
+            if (kayitlar.length > 0) {
+                veri[gercekKoleksiyon] = kayitlar;
+                toplamKayit += kayitlar.length;
+            }
+        }
+
+        if (toplamKayit === 0) return appAlert('Excel dosyasında geri yüklenecek veri bulunamadı.');
+        
+        closeModal();
+        appConfirm(
+            'Excel dosyasından ' + toplamKayit + ' kayıt geri yüklenecek. ' +
+            '<b>Mevcut tüm veriler bu yedekle değiştirilecek ve bu işlem geri alınamaz!</b> Devam edilsin mi?',
+            function () { yedekVeriyiGeriYukle(veri); },
+            'Excel\'den Geri Yükle'
+        );
+    };
+    reader.readAsArrayBuffer(f);
 }
