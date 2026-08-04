@@ -62,7 +62,7 @@ function kameraFormOku(){
   };
 }
 
-async function kameraKaydet(){ const d=kameraFormOku(); if(!d.adres){toast('Adres girin');return;} await db.collection('kameralar').add(d); closeModal(); toast('Kamera eklendi'); }
+async function kameraKaydet(){ const d=kameraFormOku(); if(!d.adres){toast('Adres girin');return;} d.kullanici = kullaniciAdi(); await db.collection('kameralar').add(d); closeModal(); toast('Kamera eklendi'); }
 function kameraDuzenleModal(id){ const k=kameralar.find(x=>x.id===id); if(!k)return; openModal('Kamera Düzenle', kameraFormAlanlari(k)+'<button class="btn btn-blue w-full mt-3" onclick="kameraGuncelle(\''+id+'\')">Kaydet</button>'); }
 async function kameraGuncelle(id){ const d=kameraFormOku(); if(!d.adres){toast('Adres girin');return;} await db.collection('kameralar').doc(id).set(d,{merge:true}); closeModal(); toast('Güncellendi'); }
 function kameraSil(id){ appConfirm('Bu kamerayı silmek istediğinizden emin misiniz?', async ()=>{ await db.collection('kameralar').doc(id).delete(); toast('Silindi'); }, 'Kamerayı Sil'); }
