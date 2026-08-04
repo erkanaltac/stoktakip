@@ -27,6 +27,10 @@ function anaMenuyuGoster() {
 
 // Belirli bir modülü göster
 function ekranGoster(ekranId) {
+    if (ekranId === 'ayarlar-modulu') {
+    yedeklemeBaslat();
+    sifreTalepleriniBaslat();
+}
     detachListeners();
     document.getElementById('dashboard').classList.add('gizli');
     var moduller = ['kullanim-modulu', 'ariza-modulu', 'kamera-modulu', 'depo-modulu', 'ayarlar-modulu'];
