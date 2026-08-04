@@ -3,7 +3,6 @@ async function veriSilmeOnay() {
     const sifre = document.getElementById('veri-sil-sifre').value;
     if (!sifre) return toast('Lütfen şifrenizi girin.');
 
-    // Kendi şifresiyle doğrula
     auth.signInWithEmailAndPassword(window.aktifKullanici.email, sifre)
         .then(() => {
             const secili = [];
@@ -11,7 +10,7 @@ async function veriSilmeOnay() {
             if (secili.length === 0) return toast('Hiçbir veri türü seçilmedi.');
 
             appConfirm(
-                'Seçili veriler silinecek. Bu işlem geri alınamaz!',
+                'SADECE SİZE AİT veriler silinecek. Bu işlem geri alınamaz!',
                 async () => {
                     try {
                         const mevcutKullanici = kullaniciAdi();
@@ -32,7 +31,6 @@ async function veriSilmeOnay() {
         .catch(() => toast('Şifre yanlış!'));
 }
 
-// Fabrika ayarları da sadece kendi verilerini temizlesin
 async function fabrikaAyarlari() {
     const sifre = document.getElementById('veri-sil-sifre').value;
     if (!sifre) return toast('Lütfen şifrenizi girin.');
@@ -66,6 +64,7 @@ async function fabrikaAyarlari() {
             );
         })
         .catch(() => toast('Şifre yanlış!'));
+}
 
 function sifreTalepleriniBaslat() {
     if (!document.getElementById('sifre-talepleri')) return;
