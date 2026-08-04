@@ -202,6 +202,10 @@
       <div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold">Sistem Ayarları</h2><button class="btn btn-gray" onclick="anaMenuyuGoster()">Ana Menü</button></div>
       <div class="card mb-4"><h3 class="text-yellow-400">Kendi Şifremi Değiştir</h3><input type="password" id="yeni-sifre" placeholder="Yeni Şifreniz" class="mb-2"><button class="btn btn-blue w-full" onclick="sifreGuncelle()">Şifreyi Güncelle</button></div>
       <div class="card mb-4"><h3 class="text-yellow-400">Modül Tercihlerim</h3><p class="text-xs text-gray-400 mb-3">Ana menüde görmek istediğiniz modülleri seçin.</p><label class="flex items-center mb-1 text-xs"><input type="checkbox" id="pref-kullanim" checked class="mr-2"> Kullanım Girişi</label><label class="flex items-center mb-1 text-xs"><input type="checkbox" id="pref-ariza" checked class="mr-2"> Arıza</label><label class="flex items-center mb-1 text-xs"><input type="checkbox" id="pref-kamera" checked class="mr-2"> Kamera</label><label class="flex items-center mb-1 text-xs"><input type="checkbox" id="pref-depo" checked class="mr-2"> Depo</label><button class="btn btn-green mt-2 w-full" onclick="kullaniciTercihleriniKaydet()">Tercihleri Kaydet</button></div>
+      <div class="card mb-4">
+    <h3 class="text-yellow-400">Şifre Talepleri</h3>
+    <div id="sifre-talepleri"><div class="muted">Yükleniyor...</div></div>
+    </div>
 
       <!-- YENİ: Yedekleme ve Geri Yükleme -->
       <div class="card mb-4">
