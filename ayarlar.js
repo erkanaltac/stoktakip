@@ -1,5 +1,7 @@
-// ayarlar.js - Sadece kendi verilerini silme
-function veriSilmeOnay() {
+// ayarlar.js – Ayarlar Modülü
+
+// Veri Silme
+async function veriSilmeOnay() {
     const sifre = document.getElementById('veri-sil-sifre').value;
     if (!sifre) return toast('Lütfen şifrenizi girin.');
 
@@ -30,7 +32,9 @@ function veriSilmeOnay() {
         })
         .catch(() => toast('Şifre yanlış!'));
 }
-function fabrikaAyarlari() {
+
+// Fabrika Ayarları
+async function fabrikaAyarlari() {
     const sifre = document.getElementById('veri-sil-sifre').value;
     if (!sifre) return toast('Lütfen şifrenizi girin.');
 
@@ -65,66 +69,91 @@ function fabrikaAyarlari() {
         .catch(() => toast('Şifre yanlış!'));
 }
 
+// Şifre Taleplerini Göster (SADECE ERKAN GÖRÜR)
 function sifreTalepleriniBaslat() {
-    if (!document.getElementById('sifre-talepleri')) return;
-    
-    // Önce kullanıcı şifrelerini çek
-    db.collection('kullaniciSifreleri').get().then(sifreSnap => {
-        const sifreler = {};
-        sifreSnap.docs.forEach(d => {
-            sifreler[d.id] = d.data().sifre || 'Bilinmiyor';
+    var el = document.getElementById('sifre-talepleri');
+    if (!el) return;
+
+    // SADECE ERKAN GÖREBİLİR
+    if (kullaniciAdi() !== 'erkan') {
+        el.innerHTML = '';
+        return;
+    }
+
+    el.innerHTML = '<div class="muted">Yükleniyor...</div>';
+
+    Promise.all([
+        db.collection('kullaniciSifreleri').get(),
+        db.collection('sifreTalepleri').get()
+    ]).then(function (results) {
+        var sifreSnap = results[0];
+        var talepSnap = results[1];
+
+        var sifreler = {};
+        sifreSnap.docs.forEach(function (d) {
+            sifreler[d.id] = d.data().sifre || '?';
         });
-        
-        // Sonra talepleri çek
-        db.collection('sifreTalepleri').get().then(s => {
-            const talepler = s.docs.map(d => ({ id: d.id, ...d.data() }));
-            talepler.sort((a, b) => {
-                if (a.tarihISO !== b.tarihISO) return b.tarihISO.localeCompare(a.tarihISO);
-                return b.saat.localeCompare(a.saat);
+
+        var talepler = talepSnap.docs.map(function (d) {
+            return { id: d.id, d: d.data() };
+        }).map(function (t) {
+            return {
+                id: t.id,
+                kullanici: t.d.kullanici || '',
+                tarih: t.d.tarih || '',
+                tarihISO: t.d.tarihISO || '',
+                saat: t.d.saat || '',
+                durum: t.d.durum || 'bekliyor'
+            };
+        });
+
+        talepler.sort(function (a, b) {
+            if (a.tarihISO !== b.tarihISO) return b.tarihISO.localeCompare(a.tarihISO);
+            return b.saat.localeCompare(a.saat);
+        });
+
+        var html = '';
+        if (talepler.length === 0) {
+            html = '<div class="muted">Bekleyen talep yok.</div>';
+        } else {
+            talepler.forEach(function (t) {
+                var sifre = sifreler[t.kullanici] || 'Henüz giriş yapmadı';
+                html += '<div class="card" style="padding:.5rem;margin-bottom:.4rem;">';
+                html += '<div class="flex justify-between items-center flex-wrap gap-2">';
+                html += '<div class="text-xs">';
+                html += '<b>' + esc(t.kullanici) + '</b>';
+                html += '<span class="text-gray-400 ml-1">' + t.tarih + ' ' + t.saat + '</span>';
+                html += '<br>';
+                html += '<span class="text-green-400">Şifre: ' + esc(sifre) + '</span>';
+                html += '<span class="text-yellow-400 ml-2">[' + t.durum + ']</span>';
+                html += '</div>';
+                html += '<div class="flex gap-2">';
+                html += '<button class="btn btn-red" style="padding:.2rem .5rem;font-size:10px;" onclick="sifreTalebiSil(\'' + t.id + '\')">';
+                html += '<i class="fa-solid fa-trash"></i> Sil';
+                html += '</button>';
+                html += '<a href="https://console.firebase.google.com/project/stoktakipp/authentication/users" target="_blank" class="btn btn-gray" style="padding:.2rem .5rem;font-size:10px;">';
+                html += '<i class="fa-solid fa-key"></i> Firebase';
+                html += '</a>';
+                html += '</div>';
+                html += '</div>';
+                html += '</div>';
             });
-            
-            let html = '';
-            if (talepler.length === 0) {
-                html = '<div class="muted">Bekleyen talep yok.</div>';
-            } else {
-                html = talepler.map(t => {
-                    const kullaniciSifresi = sifreler[t.kullanici] || 'Henüz giriş yapmadı';
-                    return `
-                        <div class="flex justify-between items-center text-xs py-2 border-b border-gray-700">
-                            <div>
-                                <b>${esc(t.kullanici)}</b>
-                                <span class="text-gray-400 ml-2">${t.tarih} ${t.saat}</span>
-                                <span class="text-green-400 ml-2">Şifre: ${esc(kullaniciSifresi)}</span>
-                            </div>
-                            <div class="flex gap-2 items-center">
-                                <span class="text-yellow-400 text-xs">${t.durum}</span>
-                                <button class="icon-btn" onclick="sifreTalebiSil('${t.id}')" title="Talebi Sil">
-                                    <i class="fa-solid fa-trash text-red-400"></i>
-                                </button>
-                                <a href="https://console.firebase.google.com/project/stoktakipp/authentication/users" 
-                                   target="_blank" 
-                                   class="btn btn-gray text-xs" 
-                                   style="padding:2px 6px;font-size:10px;">
-                                    <i class="fa-solid fa-key"></i>
-                                </a>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-            document.getElementById('sifre-talepleri').innerHTML = html;
-        });
-    }).catch(err => {
+        }
+        el.innerHTML = html;
+    }).catch(function (err) {
         console.error('Talep okuma hatası:', err);
-        document.getElementById('sifre-talepleri').innerHTML = 
-            '<div class="muted">Talepler okunamadı: ' + err.message + '</div>';
+        el.innerHTML = '<div class="muted">Talepler okunamadı: ' + err.message + '</div>';
     });
 }
 
-// Talep silme fonksiyonu
-async function sifreTalebiSil(id) {
-    appConfirm('Bu talebi silmek istediğinize emin misiniz?', async () => {
-        await db.collection('sifreTalepleri').doc(id).delete();
-        toast('Talep silindi');
-    });
+// Talep Silme
+function sifreTalebiSil(id) {
+    appConfirm('Bu talebi silmek istediğinize emin misiniz?', function () {
+        db.collection('sifreTalepleri').doc(id).delete().then(function () {
+            toast('Talep silindi');
+            sifreTalepleriniBaslat();
+        }).catch(function (e) {
+            toast('Silme hatası: ' + e.message);
+        });
+    }, 'Talep Sil');
 }
