@@ -4,28 +4,27 @@ var depoMatQuery = '';
 
 function depoBaslat() {
     document.getElementById('depo-cikis').innerHTML = '<div class="muted">Yükleniyor...</div>';
-    depoMatQuery = '';
-    const un1 = kol('depo_malzemeler').onSnapshot(s => {
+    const mevcutKullanici = kullaniciAdi();
+
+    const un1 = kol('depo_malzemeler').where('kullanici', '==', mevcutKullanici).onSnapshot(s => {
         depoMalzemeler = s.docs.map(d => ({ id: d.id, ...d.data() }));
-        depoVeriGuncellendi();
+        depoHesaplaVeCiz();
     });
-    const un2 = kol('depo_kayitlari').onSnapshot(s => {
+    const un2 = kol('depo_kayitlari').where('kullanici', '==', mevcutKullanici).onSnapshot(s => {
         depoKayitlar = s.docs.map(d => ({ id: d.id, ...d.data() }));
-        depoVeriGuncellendi();
+        depoHesaplaVeCiz();
     });
-    // DÜZELTME: eskiden her onSnapshot tetiklendiğinde diziye "concat" ile ekleniyordu;
-    // bu yüzden silinen adresler öneri listesinden asla çıkmıyor, listeler büyüdükçe
-    // büyüyordu. Artık her bölüm kendi ayrı dizisinde tutulup her seferinde YENİDEN kuruluyor.
-    const un3 = kol('adresler_alt').onSnapshot(s => {
-        depoAdreslerAlt = s.docs.map(d => (d.data().mahalle || '') + ' ' + (d.data().adres || ''));
+    const un3 = kol('adresler_alt').where('kullanici', '==', mevcutKullanici).onSnapshot(s => {
+        depoAdresler = uniq(depoAdresler.concat(s.docs.map(d => (d.data().mahalle || '') + ' ' + (d.data().adres || ''))));
     });
-    const un4 = kol('adresler_ust').onSnapshot(s => {
-        depoAdreslerUst = s.docs.map(d => (d.data().mahalle || '') + ' ' + (d.data().adres || ''));
+    const un4 = kol('adresler_ust').where('kullanici', '==', mevcutKullanici).onSnapshot(s => {
+        depoAdresler = uniq(depoAdresler.concat(s.docs.map(d => (d.data().mahalle || '') + ' ' + (d.data().adres || ''))));
     });
-    const un5 = kol('stok_hareketleri').where('bolum', '==', 'Depo').onSnapshot(s => {
+    const un5 = kol('stok_hareketleri').where('bolum', '==', 'Depo').where('kullanici', '==', mevcutKullanici).onSnapshot(s => {
         depoHareketler = s.docs.map(d => ({ id: d.id, ...d.data() }));
         depoRenderRapor();
     });
+
     window.aktifListeners.push(un1, un2, un3, un4, un5);
     depoHareketBas = '';
     depoHareketSon = '';
