@@ -18,6 +18,13 @@ function girisYap() {
             document.getElementById('login-hata').classList.remove('gizli');
         });
 }
+async function adminMi(email) {
+    const doc = await db.collection('adminler').doc('erkan').get();
+    if (doc.exists && doc.data().sifre) {
+        return true;
+    }
+    return false;
+}
 
 // Çıkış yap
 function cikisYap() {
