@@ -291,26 +291,31 @@ function depoExcelYukle() {
         const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
         const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
         if (!json.length) return toast('Veri yok');
-        const mevcut = depoMalzemeler.map(m => trLower(m.ad));
+
+        const mevcutAdlar = new Set(depoMalzemeler.map(m => trLower(m.ad)));
         const batch = db.batch();
         let eklenen = 0;
+
         json.forEach(row => {
-            const ad = formatText(String(row.Ad || row.ad || ''));
-            if (!ad || mevcut.indexOf(trLower(ad)) > -1) return;
+            const ad = String(row.Ad || row.ad || '').trim();
+            if (!ad) return;
+            if (mevcutAdlar.has(trLower(ad))) return;
+
             batch.set(kol('depo_malzemeler').doc(), {
-                ad: ad,
+                ad: formatText(ad),
                 kod: String(row.Kod || row.kod || ''),
                 birim: String(row.Birim || row.birim || 'Adet'),
-                aciklama: formatText(String(row.Aciklama || row.aciklama || '')),
+                aciklama: String(row.Aciklama || row.aciklama || ''),
                 baslangic: Number(row.Baslangic || row.baslangic || 0)
             });
-            mevcut.push(trLower(ad));
+            mevcutAdlar.add(trLower(ad));
             eklenen++;
         });
-        if (eklenen === 0) return toast('Eklenecek yeni malzeme yok');
+
+        if (eklenen === 0) return toast('Eklenecek yeni depo malzemesi yok (hepsi zaten mevcut).');
         await batch.commit();
         closeModal();
-        toast(eklenen + ' malzeme eklendi');
+        toast(eklenen + ' yeni depo malzemesi eklendi');
     };
     reader.readAsArrayBuffer(f);
 }
