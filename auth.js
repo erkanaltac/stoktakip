@@ -29,9 +29,25 @@ function cikisYap() {
     auth.signOut();
 }
 
-// Şifremi unuttum
 function sifremiUnuttum() {
-    alert('Şifrenizi sıfırlamak için lütfen Sistem Yöneticisine (Erkan) başvurun.');
+    const kullaniciAdi = document.getElementById('login-kullanici').value.trim().toLowerCase();
+    if (!kullaniciAdi) {
+        alert('Lütfen önce kullanıcı adınızı yazın.');
+        return;
+    }
+    // Talebi Firestore'a kaydet
+    const n = nowTarih();
+    db.collection('sifreTalepleri').add({
+        kullanici: kullaniciAdi,
+        tarih: n.display,
+        tarihISO: n.iso,
+        saat: n.saat,
+        durum: 'bekliyor'
+    }).then(() => {
+        alert('Şifre sıfırlama talebiniz yöneticiye (Erkan) iletildi. Ayarlar > Şifre Talepleri bölümünden takip edebilirsiniz.');
+    }).catch(() => {
+        alert('Talep iletilemedi. Lütfen Erkan ile iletişime geçin.');
+    });
 }
 
 // Şifre güncelle
