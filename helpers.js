@@ -248,3 +248,13 @@ document.addEventListener('click', function (e) {
 });
 function kol(ad) { return db.collection(ad); }
 function trKarsilastir(a, b) { return String(a || '').localeCompare(String(b || ''), 'tr'); }
+
+// Firestore koleksiyon kısayolu
+function kol(ad) {
+    return db.collection(ad);
+}
+
+// Türkçe karakter uyumlu sıralama
+function trKarsilastir(a, b) {
+    return String(a || '').localeCompare(String(b || ''), 'tr');
+}
