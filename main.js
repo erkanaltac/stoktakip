@@ -44,7 +44,10 @@ function ekranGoster(ekranId) {
     if (ekranId === 'ariza-modulu') arizaBaslat();
     if (ekranId === 'kamera-modulu') kameraBaslat();
     if (ekranId === 'depo-modulu') depoBaslat();
-    if (ekranId === 'ayarlar-modulu' && typeof yedeklemeBaslat === 'function') yedeklemeBaslat();
+    if (ekranId === 'ayarlar-modulu') {   // ← BU BLOĞU EKLEYİN
+        yedeklemeBaslat();
+        sifreTalepleriniBaslat();
+    }
 
     clearSearchInputs();
 }
