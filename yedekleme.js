@@ -343,6 +343,9 @@ function yedekExceldenGeriYukle() {
                         kayit[h] = row[idx];
                     }
                 });
+                if (!kayit.kullanici || kayit.kullanici.trim() === '') {
+                    kayit.kullanici = kullaniciAdi();
+                }
                 if (Object.keys(kayit).length > 0) {
                     kayitlar.push(kayit);
                 }
