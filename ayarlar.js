@@ -67,21 +67,29 @@ function fabrikaAyarlari() {
 
 function sifreTalepleriniBaslat() {
     if (!document.getElementById('sifre-talepleri')) return;
-    const un = db.collection('sifreTalepleri').orderBy('tarihISO', 'desc').orderBy('saat', 'desc').onSnapshot(s => {
-        const talepler = s.docs.map(d => ({ id: d.id, ...d.data() }));
-        let html = '';
-        if (talepler.length === 0) {
-            html = '<div class="muted">Bekleyen talep yok.</div>';
-        } else {
-            html = talepler.map(t => `
-                <div class="flex justify-between items-center text-xs py-1 border-b border-gray-700">
-                    <span>${esc(t.kullanici)} - ${t.tarih} ${t.saat}</span>
-                    <span class="text-yellow-400">${t.durum}</span>
-                </div>
-            `).join('');
-        }
-        document.getElementById('sifre-talepleri').innerHTML = html;
-    });
+    
+    const un = db.collection('sifreTalepleri')
+        .orderBy('tarihISO', 'desc')
+        .orderBy('saat', 'desc')
+        .onSnapshot(s => {
+            const talepler = s.docs.map(d => ({ id: d.id, ...d.data() }));
+            let html = '';
+            if (talepler.length === 0) {
+                html = '<div class="muted">Bekleyen talep yok.</div>';
+            } else {
+                html = talepler.map(t => `
+                    <div class="flex justify-between items-center text-xs py-1 border-b border-gray-700">
+                        <span><b>${esc(t.kullanici)}</b> - ${t.tarih} ${t.saat}</span>
+                        <span class="text-yellow-400">${t.durum}</span>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('sifre-talepleri').innerHTML = html;
+        }, (err) => {
+            console.error('Talep okuma hatası:', err);
+            document.getElementById('sifre-talepleri').innerHTML = 
+                '<div class="muted">Talepler okunamadı. (Yetkiniz olmayabilir)</div>';
+        });
+    
     window.aktifListeners.push(un);
 }
-
