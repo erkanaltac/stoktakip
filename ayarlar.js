@@ -72,11 +72,11 @@ function sifreTalepleriniBaslat() {
     db.collection('kullaniciSifreleri').get().then(sifreSnap => {
         const sifreler = {};
         sifreSnap.docs.forEach(d => {
-            sifreler[d.id] = d.data().sifre;
+            sifreler[d.id] = d.data().sifre || 'Bilinmiyor';
         });
         
         // Sonra talepleri çek
-        return db.collection('sifreTalepleri').get().then(s => {
+        db.collection('sifreTalepleri').get().then(s => {
             const talepler = s.docs.map(d => ({ id: d.id, ...d.data() }));
             talepler.sort((a, b) => {
                 if (a.tarihISO !== b.tarihISO) return b.tarihISO.localeCompare(a.tarihISO);
@@ -88,13 +88,19 @@ function sifreTalepleriniBaslat() {
                 html = '<div class="muted">Bekleyen talep yok.</div>';
             } else {
                 html = talepler.map(t => {
-                    const kullaniciSifresi = sifreler[t.kullanici] || 'Bilinmiyor';
+                    const kullaniciSifresi = sifreler[t.kullanici] || 'Henüz giriş yapmadı';
                     return `
-                        <div class="flex justify-between items-center text-xs py-1 border-b border-gray-700">
-                            <span><b>${esc(t.kullanici)}</b> - ${t.tarih} ${t.saat}</span>
+                        <div class="flex justify-between items-center text-xs py-2 border-b border-gray-700">
+                            <div>
+                                <b>${esc(t.kullanici)}</b>
+                                <span class="text-gray-400 ml-2">${t.tarih} ${t.saat}</span>
+                                <span class="text-green-400 ml-2">Şifre: ${esc(kullaniciSifresi)}</span>
+                            </div>
                             <div class="flex gap-2 items-center">
-                                <span class="text-green-400">Şifre: ${esc(kullaniciSifresi)}</span>
-                                <span class="text-yellow-400">${t.durum}</span>
+                                <span class="text-yellow-400 text-xs">${t.durum}</span>
+                                <button class="icon-btn" onclick="sifreTalebiSil('${t.id}')" title="Talebi Sil">
+                                    <i class="fa-solid fa-trash text-red-400"></i>
+                                </button>
                                 <a href="https://console.firebase.google.com/project/stoktakipp/authentication/users" 
                                    target="_blank" 
                                    class="btn btn-gray text-xs" 
@@ -111,6 +117,14 @@ function sifreTalepleriniBaslat() {
     }).catch(err => {
         console.error('Talep okuma hatası:', err);
         document.getElementById('sifre-talepleri').innerHTML = 
-            '<div class="muted">Talepler okunamadı.</div>';
+            '<div class="muted">Talepler okunamadı: ' + err.message + '</div>';
+    });
+}
+
+// Talep silme fonksiyonu
+async function sifreTalebiSil(id) {
+    appConfirm('Bu talebi silmek istediğinize emin misiniz?', async () => {
+        await db.collection('sifreTalepleri').doc(id).delete();
+        toast('Talep silindi');
     });
 }
