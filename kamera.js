@@ -1,11 +1,15 @@
 // kamera.js – Kamera Modülü
 let kameralar = [];
 
-function kameraBaslat(){
-  document.getElementById('kamera-liste').innerHTML = '<div class="muted">Yükleniyor...</div>';
-  document.getElementById('kamera-ara').value = '';
-  const un = db.collection('kameralar').onSnapshot(s => { kameralar = s.docs.map(d => ({ id: d.id, ...d.data() })); renderKameraListesi(); });
-  window.aktifListeners.push(un);
+function kameraBaslat() {
+    document.getElementById('kamera-liste').innerHTML = '<div class="muted">Yükleniyor...</div>';
+    document.getElementById('kamera-ara').value = '';
+    const mevcutKullanici = kullaniciAdi();
+    const un = kol('kameralar').where('kullanici', '==', mevcutKullanici).onSnapshot(s => {
+        kameralar = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderKameraListesi();
+    });
+    window.aktifListeners.push(un);
 }
 
 function renderKameraListesi(){
