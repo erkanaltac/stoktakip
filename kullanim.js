@@ -20,6 +20,7 @@ function kgBaslat(){
   document.getElementById('kg-malzeme').innerHTML = '';
   document.getElementById('kg-adres').innerHTML = '';
   document.getElementById('kg-rapor').innerHTML = '';
+  kgTabGoster('giris');
 }
 
 function kgBolgeSec(b){
