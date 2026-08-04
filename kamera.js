@@ -94,21 +94,15 @@ async function kameraExcelYukle() {
         const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
         const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
         if (json.length < 2) return toast('Veri yok');
-
-        // Mevcut kameraların adreslerini Set'e al (büyük/küçük harf duyarsız)
         const mevcutAdresler = new Set(kameralar.map(k => trLower(k.adres || '')));
         const batch = db.batch();
         let eklenen = 0;
-
         for (let i = 1; i < json.length; i++) {
             const row = json[i];
             if (!row || !row[0]) continue;
             const adres = String(row[0] || '').trim();
             if (!adres) continue;
-
-            // Aynı adres var mı kontrol et (büyük/küçük harf duyarsız)
             if (mevcutAdresler.has(trLower(adres))) continue;
-
             batch.set(kol('kameralar').doc(), {
                 adres: formatText(adres),
                 telefon: String(row[1] || ''),
@@ -116,13 +110,12 @@ async function kameraExcelYukle() {
                 ip: String(row[3] || ''),
                 nvrIp: String(row[4] || ''),
                 simkart: String(row[5] || ''),
-                aciklama: String(row[6] || '')
+                aciklama: String(row[6] || ''),
                 kullanici: kullaniciAdi()
             });
             mevcutAdresler.add(trLower(adres));
             eklenen++;
         }
-
         if (eklenen === 0) return toast('Eklenecek yeni kamera yok (hepsi zaten mevcut).');
         await batch.commit();
         closeModal();
