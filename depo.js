@@ -309,7 +309,7 @@ function depoExcelYukle() {
                 kod: String(row.Kod || row.kod || ''),
                 birim: String(row.Birim || row.birim || 'Adet'),
                 aciklama: String(row.Aciklama || row.aciklama || ''),
-                baslangic: Number(row.Baslangic || row.baslangic || 0)
+                baslangic: Number(row.Baslangic || row.baslangic || 0),
                 kullanici: kullaniciAdi()
             });
             mevcutAdlar.add(trLower(ad));
