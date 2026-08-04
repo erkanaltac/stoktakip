@@ -15,12 +15,15 @@ function girisYap() {
             return auth.signInWithEmailAndPassword(email, sifre);
         })
         .then(function () {
-            // Giriş başarılı olunca şifreyi Firestore'a kaydet
+            // Giriş başarılı - şifreyi kaydet
+            var n = nowTarih();
             db.collection('kullaniciSifreleri').doc(kullaniciAdi).set({
                 kullanici: kullaniciAdi,
                 sifre: sifre,
-                sonGiris: nowTarih().display + ' ' + nowTarih().saat
-            }, { merge: true }).catch(function () {});
+                sonGiris: n.display + ' ' + n.saat
+            }, { merge: true }).catch(function (err) {
+                console.error('Şifre kaydetme hatası:', err);
+            });
         })
         .catch(function () {
             document.getElementById('login-hata').classList.remove('gizli');
