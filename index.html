@@ -214,7 +214,29 @@
   </div>
   <div id="yedek-liste"><div class="muted">Yükleniyor...</div></div>
 </div>
-      <div class="card border-red-900 border"><h3 class="text-red-400"><i class="fa-solid fa-lock"></i> Admin Paneli</h3><div><h4 class="mb-2 text-xs text-gray-300">Veri Yönetimi (Şifre Gerekli)</h4><input type="password" id="veri-sil-sifre" placeholder="Şifrenizi girin" class="mb-2"><div class="flex flex-col gap-1 mb-2 text-xs"><label><input type="checkbox" class="veri-sil-check" value="kullanim_alt"> Kullanım Kayıtları (E5 Altı)</label><label><input type="checkbox" class="veri-sil-check" value="kullanim_ust"> Kullanım Kayıtları (E5 Üstü)</label><label><input type="checkbox" class="veri-sil-check" value="depo_kayitlari"> Depo Kayıtları</label><label><input type="checkbox" class="veri-sil-check" value="ariza_kayitlari"> Arıza Kayıtları</label><label><input type="checkbox" class="veri-sil-check" value="kameralar"> Kamera Kayıtları</label><label><input type="checkbox" class="veri-sil-check" value="adresler_alt"> Adresler (E5 Altı)</label><label><input type="checkbox" class="veri-sil-check" value="adresler_ust"> Adresler (E5 Üstü)</label><label><input type="checkbox" class="veri-sil-check" value="malzemeler_alt"> Malzemeler (E5 Altı)</label><label><input type="checkbox" class="veri-sil-check" value="malzemeler_ust"> Malzemeler (E5 Üstü)</label><label><input type="checkbox" class="veri-sil-check" value="depo_malzemeler"> Depo Malzemeleri</label></div><div class="flex gap-2"><button class="btn btn-red flex-1" onclick="veriSilmeOnay()">Seçili Verileri Sil</button><button class="btn btn-red flex-1" onclick="fabrikaAyarlari()">Fabrika Ayarları</button></div></div></div>
+      <div class="card border-red-900 border">
+    <h3 class="text-red-400"><i class="fa-solid fa-lock"></i> Veri Yönetimi</h3>
+    <div>
+        <h4 class="mb-2 text-xs text-gray-300">Kendi Verilerimi Yönet (Şifre Gerekli)</h4>
+        <input type="password" id="veri-sil-sifre" placeholder="Şifrenizi girin" class="mb-2">
+        <div class="flex flex-col gap-1 mb-2 text-xs">
+            <label><input type="checkbox" class="veri-sil-check" value="kullanim_alt"> Kullanım Kayıtları (E5 Altı)</label>
+            <label><input type="checkbox" class="veri-sil-check" value="kullanim_ust"> Kullanım Kayıtları (E5 Üstü)</label>
+            <label><input type="checkbox" class="veri-sil-check" value="depo_kayitlari"> Depo Kayıtları</label>
+            <label><input type="checkbox" class="veri-sil-check" value="ariza_kayitlari"> Arıza Kayıtları</label>
+            <label><input type="checkbox" class="veri-sil-check" value="kameralar"> Kamera Kayıtları</label>
+            <label><input type="checkbox" class="veri-sil-check" value="adresler_alt"> Adresler (E5 Altı)</label>
+            <label><input type="checkbox" class="veri-sil-check" value="adresler_ust"> Adresler (E5 Üstü)</label>
+            <label><input type="checkbox" class="veri-sil-check" value="malzemeler_alt"> Malzemeler (E5 Altı)</label>
+            <label><input type="checkbox" class="veri-sil-check" value="malzemeler_ust"> Malzemeler (E5 Üstü)</label>
+            <label><input type="checkbox" class="veri-sil-check" value="depo_malzemeler"> Depo Malzemeleri</label>
+        </div>
+        <div class="flex gap-2">
+            <button class="btn btn-red flex-1" onclick="veriSilmeOnay()">Seçili Verileri Sil</button>
+            <button class="btn btn-red flex-1" onclick="fabrikaAyarlari()">Tüm Verilerimi Sil</button>
+        </div>
+    </div>
+    </div>
     </div>
   </div>
 
