@@ -212,14 +212,14 @@ function depoMalzemeEkleModal() {
 }
 
 async function depoMalzemeKaydet() {
-    const ad = formatText(document.getElementById('dm-ad').value);
+    const ad = document.getElementById('dm-ad').value.trim();
     const bas = Number(document.getElementById('dm-bas').value);
     if (!ad || isNaN(bas)) return toast('Ad ve başlangıç stok gerekli');
     if (depoMalzemeler.some(m => trLower(m.ad) === trLower(ad))) return toast('Bu malzeme zaten var');
     await kol('depo_malzemeler').add({
         kod: document.getElementById('dm-kod').value.trim(),
         ad: ad,
-        aciklama: formatText(document.getElementById('dm-aciklama').value),
+        aciklama: document.getElementById('dm-aciklama').value.trim(),
         birim: document.getElementById('dm-birim').value.trim(),
         baslangic: bas,
         kullanici: kullaniciAdi()
@@ -228,7 +228,8 @@ async function depoMalzemeKaydet() {
     await kol('stok_hareketleri').add({
         tarih: n.display, tarihISO: n.iso, saat: n.saat,
         bolum: 'Depo', islem: 'YENİ MALZEME', malzeme: ad,
-        miktarDegisim: bas, aciklama: 'Başlangıç stok: ' + bas, kullanici: kullaniciAdi()
+        miktarDegisim: bas, aciklama: 'Başlangıç stok: ' + bas,
+        kullanici: kullaniciAdi()
     });
     closeModal();
     toast('Depo malzemesi eklendi');
