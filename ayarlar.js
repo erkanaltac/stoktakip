@@ -69,10 +69,15 @@ function sifreTalepleriniBaslat() {
     if (!document.getElementById('sifre-talepleri')) return;
     
     const un = db.collection('sifreTalepleri')
-        //.orderBy('tarihISO', 'desc')
-        //.orderBy('saat', 'desc')
+        // .orderBy('tarihISO', 'desc')  // ← geçici kapalı
+        // .orderBy('saat', 'desc')      // ← geçici kapalı
         .onSnapshot(s => {
             const talepler = s.docs.map(d => ({ id: d.id, ...d.data() }));
+            // Sıralamayı manuel yapalım
+            talepler.sort((a, b) => {
+                if (a.tarihISO !== b.tarihISO) return b.tarihISO.localeCompare(a.tarihISO);
+                return b.saat.localeCompare(a.saat);
+            });
             let html = '';
             if (talepler.length === 0) {
                 html = '<div class="muted">Bekleyen talep yok.</div>';
@@ -88,7 +93,7 @@ function sifreTalepleriniBaslat() {
         }, (err) => {
             console.error('Talep okuma hatası:', err);
             document.getElementById('sifre-talepleri').innerHTML = 
-                '<div class="muted">Talepler okunamadı. (Yetkiniz olmayabilir)</div>';
+                '<div class="muted">Talepler okunamadı. İndeks oluşturuluyor, birkaç dakika sonra tekrar deneyin.</div>';
         });
     
     window.aktifListeners.push(un);
