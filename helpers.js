@@ -1,8 +1,4 @@
 // helpers.js – Klavye sorunu çözüldü + Tüm yardımcı fonksiyonlar
-// GÜNCELLEME: Öneri (suggest) listeleri artık hangi input'a ait olduğunu
-// hatırlıyor. Böylece Tab ile başka bir alana geçildiğinde eski listenin
-// ok tuşu / Enter tuşunu "çalması" (klavye kayması) engellendi.
-
 // Toast bildirimi
 function toast(msg) {
   const t = document.getElementById('toast');
