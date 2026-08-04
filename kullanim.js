@@ -338,7 +338,8 @@ async function kgMalzemeKaydet(){
     kod: document.getElementById('km-kod').value.trim(), ad,
     aciklama: document.getElementById('km-aciklama').value.trim(),
     birim: document.getElementById('km-birim').value.trim(),
-    baslangic: bas
+    baslangic: bas,
+    kullanici: kullaniciAdi()
   });
   const n = nowTarih();
   await kol('stok_hareketleri').add({
@@ -372,7 +373,8 @@ async function kgMalzemeGuncelle(id){
   await kol('malzemeler_' + kgBolum).doc(id).set({
     kod: document.getElementById('em-kod').value.trim(), ad,
     aciklama: document.getElementById('em-aciklama').value.trim(),
-    birim: document.getElementById('em-birim').value.trim(), baslangic: bas
+    birim: document.getElementById('em-birim').value.trim(), baslangic: bas,
+    kullanici: kullaniciAdi()
   }, { merge: true });
   if (eskiBas !== bas) {
     const n = nowTarih();
@@ -513,6 +515,7 @@ function kgAdresEkleModal() {
 }
 
 async function kgAdresKaydet() {
+  
     if (!kgBolum) { toast('Önce bölge seçin'); return; }
 
     const mahalle = formatText(document.getElementById('ka-mahalle')?.value || '');
@@ -535,7 +538,8 @@ async function kgAdresKaydet() {
         await kol('adresler_' + kgBolum).add({
             mahalle: mahalle,
             adres: adresDetay,
-            onay: null
+            onay: null,
+            kullanici: kullaniciAdi()
         });
         closeModal();
         toast('Adres eklendi');
@@ -579,7 +583,7 @@ async function kgAdresGuncelle(id) {
     if (!mahalle || !adresDetay) return toast('Mahalle ve adres detayı boş olamaz.');
     const onayVal = document.getElementById('ea-onay').value;
     const onay = onayVal === 'true' ? true : onayVal === 'false' ? false : null;
-    await kol('adresler_' + kgBolum).doc(id).update({ mahalle, adres: adresDetay, onay });
+    await kol('adresler_' + kgBolum).doc(id).update({ mahalle, adres: adresDetay, onay, kullanici: kullaniciAdi() });
     closeModal();
     toast('Güncellendi');
 }
