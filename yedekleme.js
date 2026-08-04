@@ -88,55 +88,68 @@ function yedekAl() {
     );
 }
 
-// ==================== EXCEL İNDİRME (DÜZELTİLDİ) ====================
+// ==================== EXCEL İNDİRME  ====================
 function yedekExcelIndir(id) {
     const y = yedekListesi.find(x => x.id === id);
     if (!y || !y.veri) return toast('Yedek verisi bulunamadı');
 
     try {
-        // YENİ BİR ÇALIŞMA KİTABI OLUŞTUR
         const wb = XLSX.utils.book_new();
 
         // HER KOLEKSİYON İÇİN AYRI SAYFA
         for (const col of YEDEK_KOLEKSIYONLAR) {
             const kayitlar = y.veri[col] || [];
-            
-            // Boş koleksiyonlar için de sayfa oluşturalım ki eksiklik belli olsun
-            if (kayitlar.length === 0) {
-                const bosSayfa = XLSX.utils.aoa_to_sheet([['Bu koleksiyonda veri yok']]);
-                const sheetName = col.length > 31 ? col.substring(0, 28) + '...' : col;
-                XLSX.utils.book_append_sheet(wb, bosSayfa, sheetName);
-                continue;
+
+            // --- SÜTUN BAŞLIKLARINI BELİRLE ---
+            let basliklar = [];
+
+            if (kayitlar.length > 0) {
+                // Veri varsa: tüm benzersiz alan adlarını topla
+                const tumAlanlar = new Set();
+                kayitlar.forEach(k => {
+                    Object.keys(k).forEach(a => tumAlanlar.add(a));
+                });
+                basliklar = ['_id'];
+                Array.from(tumAlanlar)
+                    .filter(a => a !== '_id')
+                    .sort()
+                    .forEach(a => basliklar.push(a));
+            } else {
+                // Veri yoksa: koleksiyon adına göre bilinen başlıkları kullan
+                basliklar = koleksiyonBasliklari(col);
             }
 
-            // Tüm benzersiz alan adlarını topla
-            const tumAlanlar = new Set();
+            // --- VERİ SATIRLARINI OLUŞTUR ---
+            const satirlar = [];
+
+            // Başlık satırını ekle (her zaman)
+            satirlar.push(basliklar);
+
+            // Veri satırlarını ekle
             kayitlar.forEach(k => {
-                Object.keys(k).forEach(a => tumAlanlar.add(a));
-            });
-
-            // Sütun başlıkları: _id en başta, diğerleri alfabetik
-            const basliklar = ['_id'];
-            Array.from(tumAlanlar)
-                .filter(a => a !== '_id')
-                .sort()
-                .forEach(a => basliklar.push(a));
-
-            // Veri satırlarını oluştur
-            const satirlar = kayitlar.map(k => 
-                basliklar.map(b => {
+                const satir = basliklar.map(b => {
                     const val = k[b];
                     if (val === null || val === undefined) return '';
                     if (typeof val === 'object') return JSON.stringify(val);
                     return val;
-                })
-            );
-
-            // Başlık satırını en başa ekle
-            satirlar.unshift(basliklar);
+                });
+                satirlar.push(satir);
+            });
 
             // Sayfayı oluştur ve çalışma kitabına ekle
             const ws = XLSX.utils.aoa_to_sheet(satirlar);
+
+            // Sütun genişliklerini otomatik ayarla (opsiyonel)
+            const maxGenislik = basliklar.map((b, i) => {
+                let max = b.length;
+                satirlar.forEach(s => {
+                    const val = String(s[i] || '');
+                    if (val.length > max) max = val.length;
+                });
+                return { wch: Math.min(max + 2, 50) }; // max 50 karakter genişlik
+            });
+            ws['!cols'] = maxGenislik;
+
             const sheetName = col.length > 31 ? col.substring(0, 28) + '...' : col;
             XLSX.utils.book_append_sheet(wb, ws, sheetName);
         }
@@ -144,11 +157,30 @@ function yedekExcelIndir(id) {
         // DOSYAYI İNDİR
         const dosyaAdi = 'stok_yedek_' + y.tarihISO + '_' + y.saat.replace(':', '') + '.xlsx';
         XLSX.writeFile(wb, dosyaAdi);
-        toast('Excel dosyası indirildi (' + Object.keys(y.veri).length + ' sayfa)');
+        toast('Excel dosyası indirildi (' + YEDEK_KOLEKSIYONLAR.length + ' sayfa)');
     } catch (e) {
         console.error('Excel hatası:', e);
         appAlert('Excel oluşturma hatası: ' + e.message);
     }
+}
+
+// ==================== KOLEKSİYONLARA GÖRE BİLİNEN BAŞLIKLAR ====================
+function koleksiyonBasliklari(col) {
+    const sablonlar = {
+        'kullanim_alt': ['_id', 'aciklama', 'adres', 'kullanici', 'malzeme', 'miktar', 'saat', 'tarih', 'tarihISO'],
+        'kullanim_ust': ['_id', 'aciklama', 'adres', 'kullanici', 'malzeme', 'miktar', 'saat', 'tarih', 'tarihISO'],
+        'depo_kayitlari': ['_id', 'aciklama', 'adres', 'kullanici', 'malzeme', 'miktar', 'saat', 'tarih', 'tarihISO'],
+        'depo_malzemeler': ['_id', 'aciklama', 'ad', 'baslangic', 'birim', 'kod'],
+        'ariza_kayitlari': ['_id', 'aciklama', 'adres', 'adet', 'bolum', 'durum', 'hedefTarih', 'kullanici', 'parcalar', 'saat', 'tamamlanmaTarihi', 'tarih', 'tarihISO'],
+        'kameralar': ['_id', 'aciklama', 'adres', 'ip', 'nvrIp', 'seriNo', 'simkart', 'telefon'],
+        'adresler_alt': ['_id', 'adres', 'mahalle', 'onay'],
+        'adresler_ust': ['_id', 'adres', 'mahalle', 'onay'],
+        'malzemeler_alt': ['_id', 'aciklama', 'ad', 'baslangic', 'birim', 'kod'],
+        'malzemeler_ust': ['_id', 'aciklama', 'ad', 'baslangic', 'birim', 'kod'],
+        'stok_hareketleri': ['_id', 'aciklama', 'bolum', 'islem', 'kullanici', 'malzeme', 'miktarDegisim', 'saat', 'tarih', 'tarihISO']
+    };
+
+    return sablonlar[col] || ['_id', 'veri']; // Bilinmeyen koleksiyon için varsayılan
 }
 
 // ==================== JSON İNDİRME (DÜZELTİLDİ) ====================
@@ -180,10 +212,6 @@ function yedekJsonIndir(id) {
     }
 }
 
-// ---- Geri yükleme fonksiyonları aynı kalacak (önceki sürümdeki gibi) ----
-// yedekDosyadanYukleModal, yedekDosyadanGeriYukle,
-// yedekGeriYukleOnay, yedekVeriyiGeriYukle, yedekBatchUygula, yedekSil
-// ... (önceki sürümdeki kodları buraya ekleyin)
 
 function yedekDosyadanYukleModal() {
     openModal('JSON Dosyasından Geri Yükle', `
