@@ -1,5 +1,5 @@
 // ayarlar.js - Sadece kendi verilerini silme
-async function veriSilmeOnay() {
+function veriSilmeOnay() {
     const sifre = document.getElementById('veri-sil-sifre').value;
     if (!sifre) return toast('Lütfen şifrenizi girin.');
 
@@ -30,8 +30,7 @@ async function veriSilmeOnay() {
         })
         .catch(() => toast('Şifre yanlış!'));
 }
-
-async function fabrikaAyarlari() {
+function fabrikaAyarlari() {
     const sifre = document.getElementById('veri-sil-sifre').value;
     if (!sifre) return toast('Lütfen şifrenizi girin.');
 
