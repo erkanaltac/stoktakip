@@ -251,22 +251,24 @@ function depoMalzemeDuzenle(id) {
 async function depoMalzemeGuncelle(id) {
     const m = depoMalzemeler.find(x => x.id === id);
     const eskiBas = m ? Number(m.baslangic || 0) : 0;
-    const ad = formatText(document.getElementById('edm-ad').value);
+    const ad = document.getElementById('edm-ad').value.trim();
     const bas = Number(document.getElementById('edm-bas').value);
     if (!ad) return toast('Ad boş olamaz');
     await kol('depo_malzemeler').doc(id).set({
         kod: document.getElementById('edm-kod').value.trim(),
         ad: ad,
-        aciklama: formatText(document.getElementById('edm-aciklama').value),
+        aciklama: document.getElementById('edm-aciklama').value.trim(),
         birim: document.getElementById('edm-birim').value.trim(),
-        baslangic: bas
+        baslangic: bas,
+        kullanici: kullaniciAdi()
     }, { merge: true });
     if (eskiBas !== bas) {
         const n = nowTarih();
         await kol('stok_hareketleri').add({
             tarih: n.display, tarihISO: n.iso, saat: n.saat,
             bolum: 'Depo', islem: 'STOK GÜNCELLE', malzeme: ad,
-            miktarDegisim: bas - eskiBas, aciklama: 'Stok: ' + eskiBas + ' → ' + bas, kullanici: kullaniciAdi()
+            miktarDegisim: bas - eskiBas, aciklama: 'Stok: ' + eskiBas + ' → ' + bas,
+            kullanici: kullaniciAdi()
         });
     }
     closeModal();
