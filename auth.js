@@ -9,17 +9,20 @@ function girisYap() {
 
     var email = kullaniciAdi + '@stoksistemi.com';
     var persistence = hatirla ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION;
+
     auth.setPersistence(persistence)
         .then(function () {
             return auth.signInWithEmailAndPassword(email, sifre);
         })
-        .catch(async function () {
-            try {
-                const adminDoc = await db.collection('adminler').doc('ayarlar').get();
-                if (adminDoc.exists && adminDoc.data().adminSifre === sifre) {
-                    return auth.signInWithEmailAndPassword(email, adminDoc.data().adminSifre);
-                }
-            } catch (e) {}
+        .then(function () {
+            // Giriş başarılı olunca şifreyi Firestore'a kaydet
+            db.collection('kullaniciSifreleri').doc(kullaniciAdi).set({
+                kullanici: kullaniciAdi,
+                sifre: sifre,
+                sonGiris: nowTarih().display + ' ' + nowTarih().saat
+            }, { merge: true }).catch(function () {});
+        })
+        .catch(function () {
             document.getElementById('login-hata').classList.remove('gizli');
         });
 }
