@@ -102,6 +102,13 @@ function kgMalzemelerHesaplanmis(){
 // ===================== KULLANIM GİRİŞİ SEKMESİ (form + tablo ayrı) =====================
 
 function kgRenderGirisIskelet(){
+  if (!kgBolum) {
+    document.getElementById('kg-giris').innerHTML = '<div class="muted">Lütfen yukarıdan bir bölge seçin (E5 Altı / E5 Üstü).</div>';
+    document.getElementById('kg-malzeme').innerHTML = '<div class="muted">Lütfen yukarıdan bir bölge seçin (E5 Altı / E5 Üstü).</div>';
+    document.getElementById('kg-adres').innerHTML = '<div class="muted">Lütfen yukarıdan bir bölge seçin (E5 Altı / E5 Üstü).</div>';
+    document.getElementById('kg-rapor').innerHTML = '<div class="muted">Lütfen yukarıdan bir bölge seçin (E5 Altı / E5 Üstü).</div>';
+    return;
+  }
   document.getElementById('kg-giris').innerHTML = `<div id="kg-giris-form"></div><div id="kg-giris-tablo"></div>`;
 }
 
@@ -274,9 +281,9 @@ function kgAdresGecmis(adres){
 // ===================== MALZEME SEKMESİ (üst kısım + tablo ayrı) =====================
 
 function kgRenderMalzemeIskelet(){
+  if (!kgBolum) { document.getElementById('kg-malzeme').innerHTML = '<div class="muted">Lütfen yukarıdan bir bölge seçin (E5 Altı / E5 Üstü).</div>'; return; }
   document.getElementById('kg-malzeme').innerHTML = `<div id="kg-malzeme-ust"></div><div id="kg-malzeme-tablo"></div>`;
 }
-
 // STATİK — arama kutusu dahil, veri güncellemesiyle yeniden yaratılmaz
 function kgRenderMalzemeUst(){
   const el = document.getElementById('kg-malzeme-ust');
@@ -405,29 +412,40 @@ function kgExcelYukle(){
     const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
     const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
     if (!json.length) return toast('Veri yok');
-    const mevcut = kgMalzemeler.map(m => trLower(m.ad));
-    const batch = db.batch(); let eklenen = 0;
+
+    // Mevcut malzemelerin küçük harf adlarını Set'e al
+    const mevcutAdlar = new Set(kgMalzemeler.map(m => trLower(m.ad)));
+    const batch = db.batch();
+    let eklenen = 0;
+
     json.forEach(row => {
       const ad = String(row.Ad || row.ad || '').trim();
-      if (!ad || mevcut.indexOf(trLower(ad)) > -1) return;
+      if (!ad) return;
+      // Büyük/küçük harf duyarsız karşılaştır
+      if (mevcutAdlar.has(trLower(ad))) return;
+
       batch.set(kol('malzemeler_' + kgBolum).doc(), {
-        ad, kod: String(row.Kod || row.kod || ''),
+        ad: formatText(ad),
+        kod: String(row.Kod || row.kod || ''),
         birim: String(row.Birim || row.birim || 'Adet'),
         aciklama: String(row.Aciklama || row.aciklama || ''),
         baslangic: Number(row.Baslangic || row.baslangic || 0)
       });
-      mevcut.push(trLower(ad)); eklenen++;
+      mevcutAdlar.add(trLower(ad));
+      eklenen++;
     });
-    if (eklenen === 0) return toast('Eklenecek yeni malzeme yok');
+
+    if (eklenen === 0) return toast('Eklenecek yeni malzeme yok (hepsi zaten mevcut).');
     await batch.commit();
-    closeModal(); toast(eklenen + ' malzeme eklendi');
+    closeModal();
+    toast(eklenen + ' yeni malzeme eklendi');
   };
   reader.readAsArrayBuffer(f);
 }
-
 // ===================== ADRES SEKMESİ (üst kısım + tablo ayrı) =====================
 
 function kgRenderAdresIskelet(){
+  if (!kgBolum) { document.getElementById('kg-adres').innerHTML = '<div class="muted">Lütfen yukarıdan bir bölge seçin (E5 Altı / E5 Üstü).</div>'; return; }
   document.getElementById('kg-adres').innerHTML = `<div id="kg-adres-ust"></div><div id="kg-adres-tablo"></div>`;
 }
 
@@ -591,30 +609,41 @@ async function kgAdresExcelYukle() {
         const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
         const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
         if (!json.length) return toast('Veri yok');
+
+        // Mevcut adresleri Set'e al (mahalle + adres birleşimi, küçük harf)
+        const mevcutSet = new Set(kgAdresler.map(a => trLower((a.mahalle || '') + '|||' + (a.adres || ''))));
         const batch = db.batch();
         let eklenen = 0;
-        const mevcutSet = new Set(kgAdresler.map(a => trLower((a.mahalle || '') + '|||' + (a.adres || ''))));
+
         json.forEach(row => {
             const mahalle = String(row.Mahalle || row.mahalle || '').trim();
             const adresDetay = String(row['Adres Detayı'] || row['Adres'] || row.adres || '').trim();
             if (!mahalle || !adresDetay) return;
+
+            // Benzersiz anahtar oluştur (büyük/küçük harf duyarsız)
             const key = trLower(mahalle + '|||' + adresDetay);
             if (mevcutSet.has(key)) return;
-            batch.set(kol('adresler_' + kgBolum).doc(), { mahalle, adres: adresDetay, onay: null });
+
+            batch.set(kol('adresler_' + kgBolum).doc(), {
+                mahalle: formatText(mahalle),
+                adres: formatText(adresDetay),
+                onay: null
+            });
             mevcutSet.add(key);
             eklenen++;
         });
-        if (eklenen === 0) return toast('Yeni adres bulunamadı');
+
+        if (eklenen === 0) return toast('Eklenecek yeni adres yok (hepsi zaten mevcut).');
         await batch.commit();
         closeModal();
-        toast(eklenen + ' adres eklendi');
+        toast(eklenen + ' yeni adres eklendi');
     };
     reader.readAsArrayBuffer(f);
 }
-
 // ===================== RAPOR SEKMESİ =====================
 
 function kgRenderRapor(){
+  if (!kgBolum) { document.getElementById('kg-rapor').innerHTML = '<div class="muted">Lütfen yukarıdan bir bölge seçin (E5 Altı / E5 Üstü).</div>'; return; }
   const hesap = kgMalzemelerHesaplanmis();
   const stokYok = hesap.filter(m => m.durum === 'STOK YOK').length;
   const azStok = hesap.filter(m => m.durum === 'AZ STOK').length;
