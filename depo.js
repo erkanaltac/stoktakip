@@ -222,7 +222,8 @@ async function depoMalzemeKaydet() {
         ad: ad,
         aciklama: formatText(document.getElementById('dm-aciklama').value),
         birim: document.getElementById('dm-birim').value.trim(),
-        baslangic: bas
+        baslangic: bas,
+        kullanici: kullaniciAdi()
     });
     const n = nowTarih();
     await kol('stok_hareketleri').add({
